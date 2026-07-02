@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /contractors
+
+Sitemap: https://harryslistdfw.com/sitemap.xml

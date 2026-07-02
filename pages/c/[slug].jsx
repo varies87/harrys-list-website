@@ -1,0 +1,81 @@
+import dynamic from "next/dynamic";
+import Head from "next/head";
+
+const API_BASE_URL = "https://harrys-list-backend.vercel.app/api";
+
+const ContractorPublicProfile = dynamic(
+  () => import("../../CustomerApp").then((mod) => mod.ContractorPublicProfile),
+  { ssr: false }
+);
+
+export default function ContractorProfilePage({ contractor }) {
+  if (!contractor) {
+    return (
+      <>
+        <Head><title>Contractor not found — Harry's List</title></Head>
+        <div style={{ padding: 40, textAlign: "center", fontFamily: "sans-serif" }}>
+          <h1>Contractor not found</h1>
+          <a href="/">← Back to directory</a>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Head>
+        <title>{contractor.business_name} — Harry's List DFW</title>
+        <meta name="description" content={`${contractor.business_name} is a ${contractor.trade} contractor serving DFW. ${contractor.bio}`} />
+        <meta property="og:title" content={`${contractor.business_name} — Harry's List DFW`} />
+        <meta property="og:description" content={`${contractor.trade} contractor in Dallas-Fort Worth. ${contractor.bio}`} />
+        <meta property="og:url" content={`https://harryslistdfw.com/c/${contractor.slug || contractor.id}`} />
+        <meta property="og:type" content="profile" />
+        <link rel="canonical" href={`https://harryslistdfw.com/c/${contractor.slug || contractor.id}`} />
+      </Head>
+
+      {/* SSR content for Google */}
+      <div style={{ display: "none" }} aria-hidden="true">
+        <h1>{contractor.business_name}</h1>
+        <p>{contractor.trade} · Dallas-Fort Worth</p>
+        <p>{contractor.bio}</p>
+        {contractor.license_info && <p>License/Insurance: {contractor.license_info}</p>}
+        {contractor.years_in_business && <p>{contractor.years_in_business} years in business</p>}
+      </div>
+
+      <ContractorPublicProfile />
+    </>
+  );
+}
+
+export async function getServerSideProps({ params }) {
+  const { slug } = params;
+  const isNumeric = /^\d+$/.test(slug);
+  const lookupParam = isNumeric ? { contractorId: slug } : { slug };
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/contractors`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "getWithReviews", ...lookupParam }),
+    });
+    if (!res.ok) return { props: { contractor: null } };
+    const data = await res.json();
+    const c = data.contractor;
+    if (!c) return { props: { contractor: null } };
+    return {
+      props: {
+        contractor: {
+          id: c.id,
+          business_name: c.businessName,
+          trade: c.trade,
+          bio: c.bio || "",
+          slug: c.slug || null,
+          license_info: c.licenseInfo || null,
+          years_in_business: c.yearsInBusiness || null,
+        },
+      },
+    };
+  } catch {
+    return { props: { contractor: null } };
+  }
+}
