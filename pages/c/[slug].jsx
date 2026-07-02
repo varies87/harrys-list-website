@@ -21,6 +21,22 @@ export default function ContractorProfilePage({ contractor }) {
     );
   }
 
+  const profileUrl = `https://harryslistdfw.com/c/${contractor.slug || contractor.id}`;
+
+  // JSON-LD structured data -- tells Google this is a local business
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": contractor.business_name,
+    "description": contractor.bio,
+    "url": profileUrl,
+    "areaServed": {
+      "@type": "City",
+      "name": "Dallas-Fort Worth"
+    },
+    "knowsAbout": contractor.trade,
+  };
+
   return (
     <>
       <Head>
@@ -28,9 +44,13 @@ export default function ContractorProfilePage({ contractor }) {
         <meta name="description" content={`${contractor.business_name} is a ${contractor.trade} contractor serving DFW. ${contractor.bio}`} />
         <meta property="og:title" content={`${contractor.business_name} — Harry's List DFW`} />
         <meta property="og:description" content={`${contractor.trade} contractor in Dallas-Fort Worth. ${contractor.bio}`} />
-        <meta property="og:url" content={`https://harryslistdfw.com/c/${contractor.slug || contractor.id}`} />
+        <meta property="og:url" content={profileUrl} />
         <meta property="og:type" content="profile" />
-        <link rel="canonical" href={`https://harryslistdfw.com/c/${contractor.slug || contractor.id}`} />
+        <link rel="canonical" href={profileUrl} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       </Head>
 
       {/* SSR content for Google */}
