@@ -14,6 +14,7 @@ import {
   feeOwedForAmount,
   effectiveFeeRate,
   PAYMENT_DUE_DAYS,
+  AUTO_CONFIRM_DAYS,
   isPaymentOverdue,
   contractorIsSuspended,
   TRADES,
@@ -1892,6 +1893,8 @@ function HomeownerView({
             const hasQuote = job.quotedAmount != null;
             const isHigherThanQuoted = hasQuote && job.reportedAmount > job.quotedAmount;
             const delta = hasQuote ? job.reportedAmount - job.quotedAmount : null;
+            const daysSinceReported = Math.floor((Date.now() - new Date(job.reportedAt).getTime()) / (24 * 60 * 60 * 1000));
+            const daysUntilAutoConfirm = Math.max(0, AUTO_CONFIRM_DAYS - daysSinceReported);
             return (
               <div className={`ph-card ph-confirm-card ${isHigherThanQuoted ? "is-over-quote" : ""}`} key={job.id}>
                 <div className="ph-qr-desc">{job.description}</div>
@@ -1933,6 +1936,19 @@ function HomeownerView({
                     If the scope of work didn't change, dispute this before confirming.
                   </div>
                 )}
+
+                <div
+                  className="ph-auto-confirm-notice"
+                  style={{
+                    background: daysUntilAutoConfirm <= 2 ? "#FAE5DE" : "#E3EEDF",
+                    border: `1px solid ${daysUntilAutoConfirm <= 2 ? "#E3BCA8" : "#c7e0c2"}`,
+                    color: daysUntilAutoConfirm <= 2 ? "#A8442B" : "#2C6B3F",
+                  }}
+                >
+                  {daysUntilAutoConfirm <= 0
+                    ? "This will be automatically confirmed shortly if no action is taken."
+                    : `If you don't confirm or dispute within ${daysUntilAutoConfirm} day${daysUntilAutoConfirm === 1 ? "" : "s"}, it'll be automatically confirmed.`}
+                </div>
 
                 <div className="ph-inbox-actions">
                   <button className="ph-btn-primary" onClick={() => onConfirmJob(contractor.id, job.id)}>
@@ -2353,6 +2369,10 @@ function HomeownerView({
           <div className="ph-modal" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="ph-modal-close" onClick={() => setDisputingJob(null)} aria-label="Close">×</button>
             <h2>Dispute this job amount</h2>
+            <p className="ph-muted small">
+              The contractor will see your note and can send a corrected amount for you to confirm.
+              This doesn't affect any conversation you're having with them directly.
+            </p>
             <label className="ph-field">
               <span>What's wrong with the reported amount?</span>
               <textarea
@@ -5051,6 +5071,9 @@ const CUSTOMER_STYLES = `
 .ph-confirm-warning {
   background: var(--ph-red-tint); border: 1px solid #E3BCA8; border-radius: var(--ph-radius-sm); padding: 10px 13px;
   font-size: 12.5px; color: var(--ph-red-text); line-height: 1.5; font-weight: 500; margin: 4px 0;
+}
+.ph-auto-confirm-notice {
+  border-radius: var(--ph-radius-sm); padding: 8px 13px; font-size: 12px; font-weight: 600; margin: 4px 0;
 }
 
 .ph-avatar-img { object-fit: contain; background: #fff; padding: 2px; }

@@ -235,6 +235,13 @@ function effectiveFeeRate(amount) {
 
 const PAYMENT_DUE_DAYS = 10;
 
+// Must match the 7-day cutoff in the backend's cronAutoConfirm job (jobs.js).
+// If a homeowner takes no action on a pending confirmation within this many
+// days, it's automatically confirmed. Homeowners are told this upfront (at
+// report time) and reminded at 3 days, so this is shown in-app as a countdown
+// too rather than being a surprise.
+const AUTO_CONFIRM_DAYS = 7;
+
 function daysBetween(isoA, isoB) {
   const a = new Date(isoA);
   const b = new Date(isoB);
@@ -385,6 +392,7 @@ export {
   feeOwedForAmount,
   effectiveFeeRate,
   PAYMENT_DUE_DAYS,
+  AUTO_CONFIRM_DAYS,
   isPaymentOverdue,
   contractorIsSuspended,
   TRADES,
