@@ -2008,10 +2008,27 @@ function HomeownerView({
                       <span className="ph-qr-recipient-name">{c ? c.businessName : "Contractor"}</span>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
                         {r.status === "responded" && r.quote ? (
-                          <span className="ph-qr-recipient-quote">
-                            <span className="ph-qr-quote-price">${r.quote.price.toLocaleString()}</span>
-                            {r.quote.message && <span className="ph-muted small"> — {r.quote.message}</span>}
-                          </span>
+                          <div style={{ textAlign: "right" }}>
+                            <span className="ph-qr-recipient-quote">
+                              <span className="ph-qr-quote-price">${r.quote.price.toLocaleString()}</span>
+                              {r.quote.message && <span className="ph-muted small"> — {r.quote.message}</span>}
+                            </span>
+                            {r.quote.lineItems && r.quote.lineItems.length > 0 && (
+                              <div style={{ marginTop: 8 }}>
+                                <button
+                                  type="button"
+                                  className="ph-btn-secondary"
+                                  style={{ fontSize: 11, padding: "4px 10px" }}
+                                  onClick={() => {
+                                    const contractor = contractors.find((con) => idsMatch(con.id, r.contractorId));
+                                    window.open(`/quote-preview?contractor=${encodeURIComponent(contractor?.businessName || "Contractor")}&description=${encodeURIComponent(qr.description)}&items=${encodeURIComponent(JSON.stringify(r.quote.lineItems))}&total=${r.quote.price}&message=${encodeURIComponent(r.quote.message || "")}`, "_blank");
+                                  }}
+                                >
+                                  View itemized quote →
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <span className={`ph-status-chip ${r.status}`}>{r.status}</span>
                         )}
@@ -2431,19 +2448,41 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
     setLowReportReason("");
   };
 
+  const [lineItems, setLineItems] = useState([{ description: "", qty: 1, unitPrice: "" }]);
+  const [showLineItems, setShowLineItems] = useState(false);
+
   const startComposing = (qr) => {
     setComposingFor(qr.id);
     setQuotePrice("");
     setQuoteMessage("");
+    setLineItems([{ description: "", qty: 1, unitPrice: "" }]);
+    setShowLineItems(false);
   };
 
+  const lineItemsTotal = lineItems.reduce((sum, item) => {
+    const price = parseFloat(item.unitPrice) || 0;
+    const qty = parseFloat(item.qty) || 1;
+    return sum + price * qty;
+  }, 0);
+
+  const addLineItem = () => setLineItems((prev) => [...prev, { description: "", qty: 1, unitPrice: "" }]);
+  const removeLineItem = (i) => setLineItems((prev) => prev.filter((_, idx) => idx !== i));
+  const updateLineItem = (i, field, value) => setLineItems((prev) => prev.map((item, idx) => idx === i ? { ...item, [field]: value } : item));
+
   const submitQuote = (qr) => {
-    const price = parseFloat(quotePrice);
+    const validLineItems = showLineItems ? lineItems.filter((l) => l.description.trim() && parseFloat(l.unitPrice) > 0) : [];
+    const price = showLineItems ? lineItemsTotal : parseFloat(quotePrice);
     if (!price || price <= 0) return;
-    onRespond(qr.id, contractor.id, "responded", { price, message: quoteMessage.trim() });
+    onRespond(qr.id, contractor.id, "responded", {
+      price,
+      message: quoteMessage.trim(),
+      lineItems: validLineItems.length > 0 ? validLineItems : null,
+    });
     setComposingFor(null);
     setQuotePrice("");
     setQuoteMessage("");
+    setLineItems([{ description: "", qty: 1, unitPrice: "" }]);
+    setShowLineItems(false);
   };
 
   const [acceptedEstimates, setAcceptedEstimates] = React.useState([]);
@@ -2497,20 +2536,94 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
 
             {myStatus === "sent" && composingFor === qr.id && (
               <div className="ph-compose-quote">
-                <label className="ph-field">
-                  <span>Your price</span>
-                  <div className="ph-report-row">
-                    <span className="ph-report-prefix">$</span>
-                    <input
-                      className="ph-report-input"
-                      value={quotePrice}
-                      onChange={(e) => setQuotePrice(e.target.value)}
-                      placeholder="450"
-                      inputMode="decimal"
-                    />
+                {/* Toggle between simple price and itemized */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                  <button
+                    type="button"
+                    className={!showLineItems ? "ph-btn-primary" : "ph-btn-secondary"}
+                    style={{ fontSize: 12, padding: "6px 14px" }}
+                    onClick={() => setShowLineItems(false)}
+                  >
+                    Simple price
+                  </button>
+                  <button
+                    type="button"
+                    className={showLineItems ? "ph-btn-primary" : "ph-btn-secondary"}
+                    style={{ fontSize: 12, padding: "6px 14px" }}
+                    onClick={() => setShowLineItems(true)}
+                  >
+                    Itemized quote
+                  </button>
+                </div>
+
+                {!showLineItems ? (
+                  <label className="ph-field">
+                    <span>Your price</span>
+                    <div className="ph-report-row">
+                      <span className="ph-report-prefix">$</span>
+                      <input
+                        className="ph-report-input"
+                        value={quotePrice}
+                        onChange={(e) => setQuotePrice(e.target.value)}
+                        placeholder="450"
+                        inputMode="decimal"
+                        autoFocus
+                      />
+                    </div>
+                  </label>
+                ) : (
+                  <div className="ph-line-items">
+                    <div className="ph-line-items-header">
+                      <span>Description</span>
+                      <span>Qty</span>
+                      <span>Unit price</span>
+                      <span>Total</span>
+                      <span></span>
+                    </div>
+                    {lineItems.map((item, i) => (
+                      <div className="ph-line-item-row" key={i}>
+                        <input
+                          className="ph-line-item-desc"
+                          value={item.description}
+                          onChange={(e) => updateLineItem(i, "description", e.target.value)}
+                          placeholder="e.g. Labor"
+                        />
+                        <input
+                          className="ph-line-item-num"
+                          value={item.qty}
+                          onChange={(e) => updateLineItem(i, "qty", e.target.value)}
+                          inputMode="decimal"
+                          placeholder="1"
+                        />
+                        <input
+                          className="ph-line-item-num"
+                          value={item.unitPrice}
+                          onChange={(e) => updateLineItem(i, "unitPrice", e.target.value)}
+                          inputMode="decimal"
+                          placeholder="0.00"
+                        />
+                        <span className="ph-line-item-total">
+                          ${((parseFloat(item.qty) || 1) * (parseFloat(item.unitPrice) || 0)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        <button
+                          type="button"
+                          className="ph-line-item-remove"
+                          onClick={() => removeLineItem(i)}
+                          disabled={lineItems.length === 1}
+                        >×</button>
+                      </div>
+                    ))}
+                    <button type="button" className="ph-btn-secondary" style={{ fontSize: 12, padding: "5px 12px", marginTop: 8 }} onClick={addLineItem}>
+                      + Add line item
+                    </button>
+                    <div className="ph-line-items-total">
+                      <span>Total</span>
+                      <span>${lineItemsTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
                   </div>
-                </label>
-                <label className="ph-field">
+                )}
+
+                <label className="ph-field" style={{ marginTop: 12 }}>
                   <span>Message to the homeowner (optional)</span>
                   <textarea
                     rows={3}
@@ -2520,7 +2633,11 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
                   />
                 </label>
                 <div className="ph-inbox-actions">
-                  <button className="ph-btn-primary" disabled={!quotePrice || parseFloat(quotePrice) <= 0} onClick={() => submitQuote(qr)}>
+                  <button
+                    className="ph-btn-primary"
+                    disabled={showLineItems ? lineItemsTotal <= 0 : !quotePrice || parseFloat(quotePrice) <= 0}
+                    onClick={() => submitQuote(qr)}
+                  >
                     Send quote to homeowner
                   </button>
                   <button className="ph-btn-secondary" onClick={() => setComposingFor(null)}>
@@ -4342,6 +4459,35 @@ const CUSTOMER_STYLES = `
 .ph-compose-quote {
   background: var(--ph-bg); border: 1px solid var(--ph-sand-line); border-radius: var(--ph-radius-sm); padding: 14px; display: flex; flex-direction: column; gap: 4px;
 }
+.ph-line-items { display: flex; flex-direction: column; gap: 6px; }
+.ph-line-items-header {
+  display: grid; grid-template-columns: 1fr 60px 90px 80px 24px;
+  gap: 6px; font-size: 10.5px; font-weight: 700; color: var(--ph-taupe-soft);
+  text-transform: uppercase; letter-spacing: 0.05em; padding: 0 4px;
+}
+.ph-line-item-row {
+  display: grid; grid-template-columns: 1fr 60px 90px 80px 24px;
+  gap: 6px; align-items: center;
+}
+.ph-line-item-desc, .ph-line-item-num {
+  font-family: var(--ph-sans); font-size: 13px; padding: 7px 9px;
+  border: 1.5px solid var(--ph-sand); border-radius: 6px; background: var(--ph-surface);
+  color: var(--ph-ink);
+}
+.ph-line-item-desc:focus, .ph-line-item-num:focus { outline: none; border-color: var(--ph-clay); }
+.ph-line-item-total { font-size: 13px; font-weight: 600; color: var(--ph-ink); font-family: var(--ph-mono); text-align: right; }
+.ph-line-item-remove {
+  background: none; border: none; font-size: 18px; color: var(--ph-taupe-soft);
+  cursor: pointer; padding: 0; line-height: 1;
+}
+.ph-line-item-remove:hover { color: var(--ph-red-text); }
+.ph-line-item-remove:disabled { opacity: 0.2; cursor: not-allowed; }
+.ph-line-items-total {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 4px 4px; border-top: 1.5px solid var(--ph-sand-line); margin-top: 4px;
+  font-size: 14px; font-weight: 700; color: var(--ph-ink);
+}
+.ph-line-items-total span:last-child { font-family: var(--ph-mono); color: var(--ph-clay-dark); }
 .ph-sent-quote-summary {
   background: var(--ph-bg); border-radius: var(--ph-radius-sm); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;
 }
@@ -5645,7 +5791,7 @@ export function ContractorApp() {
   const handleRespond = async (qrId, contractorId, status, quoteDetails) => {
     try {
       // contractorId still needed for local state update; backend derives it from session.
-      await apiCall("quotes", { action: "respond", quoteRequestId: qrId, status, price: quoteDetails?.price, message: quoteDetails?.message });
+      await apiCall("quotes", { action: "respond", quoteRequestId: qrId, status, price: quoteDetails?.price, message: quoteDetails?.message, lineItems: quoteDetails?.lineItems || null });
       setQuoteRequests((prev) => prev.map((qr) => qr.id !== qrId ? qr : { ...qr, recipients: qr.recipients.map((r) => idsMatch(r.contractorId, contractorId) ? { ...r, status, ...(quoteDetails ? { quote: quoteDetails } : {}) } : r) }));
     } catch (err) { setLoadError(err.message); }
   };
