@@ -4371,6 +4371,7 @@ function ContractorShell({
   const accountItems = [
     { id: "onboard",   icon: "ti-user",               label: "My profile", mobileLabel: "Profile" },
     { id: "portfolio", icon: "ti-photo",               label: "Portfolio",  mobileLabel: "Portfolio" },
+    { id: "invoice",   icon: "ti-file-invoice",        label: "Invoice preview", mobileLabel: "Invoice" },
     { id: "share",     icon: "ti-qrcode",              label: "Share",      mobileLabel: "Share" },
   ];
 
@@ -5822,8 +5823,9 @@ const CUSTOMER_STYLES = `
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
-    padding: 6px 11px;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 4px;
     border-radius: 999px;
     background: none;
     border: none;
@@ -6228,6 +6230,72 @@ export function ContractorShareScreen({ contractor }) {
   );
 }
 
+// ContractorInvoicePreviewScreen -- lets a contractor see exactly what the
+// invoice and quote documents look like to their customers, without waiting
+// for a real job. Opens the real /quote-preview page (the same one customers
+// see) pre-filled with the contractor's actual name/trade and sample items,
+// so the preview can never drift from the real thing.
+export function ContractorInvoicePreviewScreen({ contractor }) {
+  const sampleItems = [
+    { description: "Labor — sample line item", qty: 1, unitPrice: 850 },
+    { description: "Materials — sample line item", qty: 1, unitPrice: 400 },
+  ];
+  const sampleTotal = sampleItems.reduce((s, it) => s + it.qty * it.unitPrice, 0);
+
+  const buildUrl = (type) => {
+    const params = new URLSearchParams({
+      contractor: contractor.businessName || "Your business",
+      trade: contractor.trade || "",
+      description: "Sample job — this is what your customers will see.",
+      items: JSON.stringify(sampleItems),
+      total: String(sampleTotal),
+      message:
+        type === "invoice"
+          ? "Thanks for your business! Payment details as discussed."
+          : "Happy to answer any questions — just let me know.",
+      type,
+    });
+    return `/quote-preview?${params.toString()}`;
+  };
+
+  return (
+    <div className="cd-content">
+      <div className="cd-page-header">
+        <div className="cd-page-title">Invoice &amp; quote preview</div>
+      </div>
+
+      <div className="cd-card" style={{ maxWidth: 520 }}>
+        <p className="cd-muted" style={{ marginTop: 0, marginBottom: 20, fontSize: 13.5, lineHeight: 1.6 }}>
+          This is exactly what your customers see when you send a quote or invoice —
+          led by your business name, with Harry's List only as a small footer credit.
+          These samples use placeholder line items; your real ones are built from each job.
+        </p>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <a
+            href={buildUrl("invoice")}
+            target="_blank"
+            rel="noreferrer"
+            className="cd-btn cd-btn-primary"
+            style={{ textDecoration: "none" }}
+          >
+            Preview invoice →
+          </a>
+          <a
+            href={buildUrl("quote")}
+            target="_blank"
+            rel="noreferrer"
+            className="cd-btn cd-btn-secondary"
+            style={{ textDecoration: "none" }}
+          >
+            Preview quote →
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 
 export {
@@ -6420,6 +6488,7 @@ export function ContractorApp() {
                   </div>
                 )}
                 {activeScreen === "portfolio" && <ContractorPortfolio contractor={currentContractor} />}
+                {activeScreen === "invoice" && <ContractorInvoicePreviewScreen contractor={currentContractor} />}
                 {activeScreen === "share" && <ContractorShareScreen contractor={currentContractor} />}
               </ContractorShell>
             );
