@@ -362,6 +362,8 @@ function AdminConsole({ password, onLogout }) {
   const [unreported, setUnreported] = useState([]);
   const [archived, setArchived] = useState([]);
   const [archivedLoading, setArchivedLoading] = useState(false);
+  const [active, setActive] = useState([]);
+  const [activeLoading, setActiveLoading] = useState(false);
   const [metrics, setMetrics] = useState(null);
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -381,6 +383,18 @@ function AdminConsole({ password, onLogout }) {
       setError(err.message);
     } finally {
       setMetricsLoading(false);
+    }
+  };
+
+  const loadActive = async () => {
+    setActiveLoading(true);
+    try {
+      const data = await apiCall("contractors", { action: "listApproved", adminPassword: password });
+      setActive(data.contractors || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActiveLoading(false);
     }
   };
 
@@ -464,6 +478,9 @@ function AdminConsole({ password, onLogout }) {
     }
     if (activeTab === "unreported" && unreported.length === 0 && !unreportedLoading) {
       loadUnreported();
+    }
+    if (activeTab === "active" && active.length === 0 && !activeLoading) {
+      loadActive();
     }
     if (activeTab === "archived" && archived.length === 0 && !archivedLoading) {
       loadArchived();
@@ -566,6 +583,14 @@ function AdminConsole({ password, onLogout }) {
         >
           Unreported jobs
           {unreported.length > 0 && <span className="ad-tab-badge ad-tab-badge-red">{unreported.length}</span>}
+        </button>
+        <button
+          type="button"
+          className={`ad-tab ${activeTab === "active" ? "is-active" : ""}`}
+          onClick={() => setActiveTab("active")}
+        >
+          Active contractors
+          {active.length > 0 && <span className="ad-tab-badge">{active.length}</span>}
         </button>
         <button
           type="button"
@@ -887,6 +912,42 @@ function AdminConsole({ password, onLogout }) {
             )}
           </div>
         )}
+        {/* ── Active contractors tab ── */}
+        {activeTab === "active" && (
+          <div className="ad-tab-content">
+            <div className="ad-queue-header">
+              <div>
+                <div className="ad-queue-count">{activeLoading ? "—" : active.length}</div>
+                <div className="ad-queue-label">active contractor{active.length === 1 ? "" : "s"} in directory</div>
+              </div>
+            </div>
+            {activeLoading && <div className="ad-empty">Loading…</div>}
+            {!activeLoading && active.length === 0 && (
+              <div className="ad-empty">
+                <div className="ad-empty-title">No active contractors yet</div>
+                <p>Approve contractors from the queue to list them in the directory.</p>
+              </div>
+            )}
+            {!activeLoading && active.length > 0 && (
+              <div className="ad-queue">
+                {active.map((c) => (
+                  <QueueRow
+                    key={c.id}
+                    contractor={c}
+                    onApprove={(id) => handleDecision(id, "approved")}
+                    onReject={(id) => handleDecision(id, "rejected")}
+                    onArchive={(id) => {
+                      handleDecision(id, "archived");
+                      setActive((prev) => prev.filter((x) => x.id !== id));
+                    }}
+                    busy={busyId === c.id}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Archived contractors tab ── */}
         {activeTab === "archived" && (
           <div className="ad-tab-content">
