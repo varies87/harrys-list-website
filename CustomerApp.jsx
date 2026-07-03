@@ -1976,7 +1976,7 @@ function HomeownerView({
                     className="ph-btn-secondary"
                     style={{ fontSize: 12, padding: "5px 12px", alignSelf: "flex-start" }}
                     onClick={() => {
-                      window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
+                      window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&trade=${encodeURIComponent(contractor.trade || "")}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
                     }}
                   >
                     View invoice →
@@ -2301,7 +2301,7 @@ function HomeownerView({
                                   style={{ fontSize: 11, padding: "4px 10px" }}
                                   onClick={() => {
                                     const contractor = contractors.find((con) => idsMatch(con.id, r.contractorId));
-                                    window.open(`/quote-preview?contractor=${encodeURIComponent(contractor?.businessName || "Contractor")}&description=${encodeURIComponent(qr.description)}&items=${encodeURIComponent(JSON.stringify(r.quote.lineItems))}&total=${r.quote.price}&message=${encodeURIComponent(r.quote.message || "")}`, "_blank", "noopener,noreferrer");
+                                    window.open(`/quote-preview?contractor=${encodeURIComponent(contractor?.businessName || "Contractor")}&trade=${encodeURIComponent(contractor?.trade || "")}&description=${encodeURIComponent(qr.description)}&items=${encodeURIComponent(JSON.stringify(r.quote.lineItems))}&total=${r.quote.price}&message=${encodeURIComponent(r.quote.message || "")}`, "_blank", "noopener,noreferrer");
                                   }}
                                 >
                                   View itemized quote →
