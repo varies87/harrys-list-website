@@ -119,7 +119,9 @@ function QueueRow({ contractor, onApprove, onReject, onArchive, busy }) {
             </div>
             <div>
               <span className="ad-detail-label">Status</span>
-              <span className="ad-detail-value">{contractor.status}</span>
+              <span className="ad-detail-value">
+                {contractor.status === "pending_review" ? "Edit pending re-review" : contractor.status}
+              </span>
             </div>
           </div>
           <div className="ad-row-actions">

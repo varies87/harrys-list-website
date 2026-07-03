@@ -1779,7 +1779,7 @@ function HomeownerView({
 
   const filtered = useMemo(() => {
     return contractors.filter((c) => {
-      if (c.status !== "approved") return false;
+      if (c.status !== "approved" && c.status !== "pending_review") return false;
       if (contractorIsSuspended(c)) return false;
       if (tradeFilter !== "All trades" && c.trade !== tradeFilter) return false;
       if (cityFilter !== "All cities") {
@@ -2761,6 +2761,12 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
 
   return (
     <div>
+      {contractor.status === "pending_review" && (
+        <div className="ph-reviewing-notice">
+          <strong>Your recent edit is being re-reviewed.</strong> Your listing is still live with your
+          update -- this doesn't affect anything below.
+        </div>
+      )}
       {acceptedEstimates.length > 0 && (
         <div style={{ marginBottom: 24 }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--ph-ink)", marginBottom: 12 }}>Accepted estimate requests</h3>
@@ -4913,6 +4919,7 @@ const CUSTOMER_STYLES = `
 .ph-tab-switch button.is-active { background: var(--ph-surface); font-weight: 700; color: var(--ph-ink); box-shadow: var(--ph-shadow-sm); }
 
 .ph-pending-banner { background: #FBF1DE; border: 1px solid #EAD7AC; border-radius: var(--ph-radius-md); padding: 18px; font-size: 13.5px; }
+.ph-reviewing-notice { background: #FBF1DE; border: 1px solid #EAD7AC; border-radius: var(--ph-radius-md); padding: 10px 14px; font-size: 13px; margin-bottom: 16px; }
 .ph-rejected-banner { background: var(--ph-red-tint); border: 1px solid #E3BCA8; border-radius: var(--ph-radius-md); padding: 18px; font-size: 13.5px; color: var(--ph-red-text); }
 .ph-rejected-banner strong { display: block; margin-bottom: 6px; font-size: 14.5px; }
 .ph-inbox-card { max-width: 660px; }
