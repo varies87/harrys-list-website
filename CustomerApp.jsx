@@ -2420,7 +2420,7 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
       setRequestingEstimateFor(null);
       setEstimateMessage("");
     } catch (err) {
-      alert(err.message);
+      setEstimateMessage(err.message);
     } finally {
       setEstimateSubmitting(false);
     }
