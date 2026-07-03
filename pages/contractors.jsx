@@ -42,12 +42,15 @@ export default function ContractorsPage() {
   );
 }
 
+
 /**
- * Visible marketing pitch shown above the contractor sign-up/login app.
- * The contractor-targeted ad sends people directly to this page (skipping
- * the homepage entirely), so previously they landed straight on a bare
- * login form with zero explanation of what Harry's List is or why they'd
- * want to join -- the same gap that existed on the homeowner homepage.
+ * Visible contractor landing pitch shown above the sign-up/login app.
+ * Contractor-targeted ads send people straight here (skipping the homepage),
+ * so this leads with the fee model — the single most persuasive, concrete
+ * thing about the product — then walks through the run-the-job tooling.
+ * Framed for a pre-liquidity marketplace: it describes HOW requests work
+ * ("when a homeowner wants a quote, it comes to you"), not a promise of lead
+ * volume that can't yet be guaranteed.
  */
 function ContractorHero() {
   const scrollToPortal = (e) => {
@@ -55,58 +58,102 @@ function ContractorHero() {
     document.getElementById("portal")?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const features = [
+    {
+      icon: "ti-inbox",
+      title: "Requests come straight to you",
+      body: "When a homeowner in your service area wants a quote, it lands in your inbox — not auctioned off to five contractors bidding against each other for the same lead.",
+    },
+    {
+      icon: "ti-map-pin",
+      title: "You pick your service area",
+      body: "Choose the exact DFW zip codes you cover, so you only hear from homeowners you can actually serve.",
+    },
+    {
+      icon: "ti-file-invoice",
+      title: "Quote and invoice in-app",
+      body: "Build itemized quotes and invoices with line items, then send a clean, printable version. The invoice even pre-fills from your original quote.",
+    },
+    {
+      icon: "ti-star",
+      title: "Reviews that can't be faked",
+      body: "Ratings come only from real, completed jobs — so a strong reputation actually means something, and nobody can buy their way above you in search.",
+    },
+    {
+      icon: "ti-qrcode",
+      title: "Bring your own customers too",
+      body: "Get a free profile page and a QR code to put on business cards, your truck, or your Instagram — a way to collect reviews from the jobs you already have.",
+    },
+  ];
+
   return (
     <div className="cl-landing">
       <style>{CONTRACTOR_LANDING_STYLES}</style>
 
       <section className="cl-hero">
         <div className="cl-hero-inner">
-          <span className="cl-eyebrow">Dallas &ndash; Fort Worth</span>
-          <h1 className="cl-h1">Get found by DFW homeowners. List free. Pay only when a job is done.</h1>
+          <span className="cl-eyebrow">For DFW contractors</span>
+          <h1 className="cl-h1">Keep 96 to 99% of every job.</h1>
           <p className="cl-sub">
-            No monthly fee, no per-lead charge, no bidding against other contractors just to show up.
-            A small percentage fee applies only after a homeowner confirms your work is complete.
+            No pay-per-lead. No monthly fee. No cost to list. You pay one small percentage
+            only after a homeowner confirms the job is done.
           </p>
-          <div className="cl-cta-row">
-            <a href="#portal" className="cl-btn cl-btn-primary" onClick={scrollToPortal}>
-              Create your free listing →
-            </a>
-            <a href="/" className="cl-btn cl-btn-secondary">
-              Looking to hire someone instead? →
-            </a>
-          </div>
+          <a href="#portal" className="cl-btn cl-btn-primary" onClick={scrollToPortal}>
+            List your business free →
+          </a>
         </div>
       </section>
 
       <section className="cl-section">
-        <h2 className="cl-h2">How it works</h2>
-        <div className="cl-steps">
-          <div className="cl-step">
-            <div className="cl-step-num">1</div>
-            <div>
-              <div className="cl-step-title">List your business for free</div>
-              <p className="cl-step-body">Add your trade, service area, and portfolio photos. No cost to get listed or stay listed.</p>
-            </div>
+        <div className="cl-fee-grid">
+          <div className="cl-fee-tile">
+            <div className="cl-fee-pct">4%</div>
+            <div className="cl-fee-label">under $500</div>
           </div>
-          <div className="cl-step">
-            <div className="cl-step-num">2</div>
-            <div>
-              <div className="cl-step-title">Respond to real quote requests</div>
-              <p className="cl-step-body">DFW homeowners searching your trade send requests directly to you &mdash; no bidding against a dozen other contractors for the same lead.</p>
-            </div>
+          <div className="cl-fee-tile">
+            <div className="cl-fee-pct">3%</div>
+            <div className="cl-fee-label">to $2,500</div>
           </div>
-          <div className="cl-step">
-            <div className="cl-step-num">3</div>
-            <div>
-              <div className="cl-step-title">Only pay after you're paid</div>
-              <p className="cl-step-body">A small percentage fee applies only once the homeowner confirms the job is complete &mdash; never upfront, never for a lead that goes nowhere.</p>
-              <p className="cl-step-body cl-step-note">You collect payment from the homeowner directly, however you normally invoice. Harry's List only charges its fee, automatically, after they confirm.</p>
-            </div>
+          <div className="cl-fee-tile">
+            <div className="cl-fee-pct">2%</div>
+            <div className="cl-fee-label">to $10,000</div>
+          </div>
+          <div className="cl-fee-tile cl-fee-tile-dark">
+            <div className="cl-fee-pct">1%</div>
+            <div className="cl-fee-label">$10,000+</div>
           </div>
         </div>
-        <a href="#portal" className="cl-btn cl-btn-primary cl-cta-bottom" onClick={scrollToPortal}>
-          Create your free listing →
-        </a>
+        <p className="cl-fee-note">
+          The bigger the job, the smaller the cut. A $4,000 job costs you $80 — and only
+          after you've been paid for it.
+        </p>
+      </section>
+
+      <section className="cl-section">
+        <h2 className="cl-h2">Why contractors join</h2>
+        <div className="cl-features">
+          {features.map((f) => (
+            <div className="cl-feature" key={f.title}>
+              <div className="cl-feature-icon" aria-hidden="true">
+                <i className={`ti ${f.icon}`} />
+              </div>
+              <div>
+                <div className="cl-feature-title">{f.title}</div>
+                <p className="cl-feature-body">{f.body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="cl-section cl-closer-wrap">
+        <div className="cl-closer">
+          <div className="cl-closer-title">Free to join. Free to list. Free to quote.</div>
+          <p className="cl-closer-sub">You only ever pay after you've been paid for a completed job.</p>
+          <a href="#portal" className="cl-btn cl-btn-primary" onClick={scrollToPortal}>
+            List your business today →
+          </a>
+        </div>
       </section>
     </div>
   );
@@ -120,7 +167,12 @@ const CONTRACTOR_LANDING_STYLES = `
   --cl-ink-soft: #3D4F42;
   --cl-clay: #C1622A;
   --cl-clay-dark: #A8511F;
+  --cl-clay-tint: #FBE9DD;
+  --cl-clay-text: #993C1D;
+  --cl-sand: #F7F1E7;
+  --cl-sand-text: #6B5840;
   --cl-sand-line: #EDE3D2;
+  --cl-gold: #E8A33D;
   --cl-serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, "Times New Roman", serif;
   --cl-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
   font-family: var(--cl-sans);
@@ -131,70 +183,62 @@ const CONTRACTOR_LANDING_STYLES = `
   background: var(--cl-ink);
   background-image: linear-gradient(165deg, #20342a 0%, var(--cl-ink) 60%);
   color: var(--cl-bg);
-  padding: 64px 24px 56px;
+  padding: 60px 24px 52px;
+  text-align: center;
 }
-.cl-hero-inner { max-width: 720px; margin: 0 auto; text-align: center; }
+.cl-hero-inner { max-width: 620px; margin: 0 auto; }
 .cl-eyebrow {
-  display: inline-block;
-  font-size: 12.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #E8A33D;
-  margin-bottom: 14px;
+  display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--cl-gold); margin-bottom: 16px;
 }
 .cl-h1 {
-  font-family: var(--cl-serif);
-  font-size: clamp(26px, 4.2vw, 38px);
-  line-height: 1.22;
-  font-weight: 600;
-  margin: 0 0 16px;
-  color: #FDFBF6;
+  font-family: var(--cl-serif); font-size: clamp(30px, 5vw, 42px); line-height: 1.12;
+  font-weight: 600; margin: 0 0 16px; color: #FDFBF6;
 }
 .cl-sub {
-  font-size: 16px;
-  line-height: 1.6;
-  color: #D9E2DB;
-  max-width: 560px;
-  margin: 0 auto 28px;
+  font-size: 16.5px; line-height: 1.6; color: #D9E2DB; max-width: 500px; margin: 0 auto 26px;
 }
-.cl-cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 .cl-btn {
-  display: inline-block;
-  padding: 12px 22px;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 15px;
-  text-decoration: none;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: inline-block; padding: 13px 26px; border-radius: 8px; font-weight: 700;
+  font-size: 15px; text-decoration: none; transition: transform 0.15s ease, background 0.15s ease;
 }
 .cl-btn-primary { background: var(--cl-clay); color: #fff; }
 .cl-btn-primary:hover { background: var(--cl-clay-dark); transform: translateY(-1px); }
-.cl-btn-secondary { background: rgba(255,255,255,0.08); color: #FDFBF6; border: 1.5px solid rgba(255,255,255,0.35); }
-.cl-btn-secondary:hover { background: rgba(255,255,255,0.14); transform: translateY(-1px); }
-.cl-section { max-width: 900px; margin: 0 auto; padding: 56px 24px; }
+.cl-section { max-width: 720px; margin: 0 auto; padding: 40px 24px 0; }
+.cl-fee-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.cl-fee-tile {
+  background: var(--cl-sand); border-radius: 12px; padding: 18px 8px; text-align: center;
+}
+.cl-fee-tile-dark { background: var(--cl-ink); }
+.cl-fee-pct { font-size: 28px; font-weight: 700; color: var(--cl-ink); font-family: var(--cl-serif); }
+.cl-fee-tile-dark .cl-fee-pct { color: var(--cl-gold); }
+.cl-fee-label { font-size: 12px; color: var(--cl-sand-text); margin-top: 4px; }
+.cl-fee-tile-dark .cl-fee-label { color: #B8C4BB; }
+.cl-fee-note { text-align: center; font-size: 13.5px; color: var(--cl-ink-soft); margin: 14px 0 0; }
 .cl-h2 {
-  font-family: var(--cl-serif);
-  font-size: 24px;
-  font-weight: 600;
-  margin: 0 0 28px;
-  color: var(--cl-ink);
+  font-family: var(--cl-serif); font-size: 24px; font-weight: 600; margin: 0 0 20px; color: var(--cl-ink);
 }
-.cl-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
-.cl-step { display: flex; gap: 14px; align-items: flex-start; }
-.cl-step-num {
-  width: 30px; height: 30px; border-radius: 8px;
-  background: var(--cl-clay); color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 14px; flex-shrink: 0;
+.cl-features { display: flex; flex-direction: column; gap: 12px; }
+.cl-feature {
+  background: var(--cl-surface); border: 1px solid var(--cl-sand-line); border-radius: 14px;
+  padding: 18px 20px; display: flex; gap: 16px; align-items: flex-start;
 }
-.cl-step-title { font-weight: 700; color: var(--cl-ink); margin-bottom: 4px; font-size: 15px; }
-.cl-step-body { font-size: 13.5px; color: var(--cl-ink-soft); line-height: 1.55; margin: 0; }
-.cl-step-body + .cl-step-body { margin-top: 6px; }
-.cl-step-note { font-style: italic; }
-.cl-cta-bottom { display: block; width: fit-content; margin: 36px auto 0; }
-@media (max-width: 760px) {
-  .cl-steps { grid-template-columns: 1fr; gap: 24px; }
+.cl-feature-icon {
+  width: 40px; height: 40px; border-radius: 10px; background: var(--cl-clay-tint);
+  color: var(--cl-clay-text); display: flex; align-items: center; justify-content: center;
+  font-size: 21px; flex-shrink: 0;
+}
+.cl-feature-title { font-weight: 700; font-size: 15.5px; color: var(--cl-ink); margin-bottom: 4px; }
+.cl-feature-body { margin: 0; font-size: 14px; color: var(--cl-ink-soft); line-height: 1.55; }
+.cl-closer-wrap { padding-bottom: 12px; }
+.cl-closer {
+  background: var(--cl-ink); border-radius: 16px; padding: 32px 24px; text-align: center;
+}
+.cl-closer-title { font-family: var(--cl-serif); font-size: 21px; font-weight: 600; color: #FDFBF6; margin-bottom: 6px; }
+.cl-closer-sub { font-size: 14px; color: #B8C4BB; margin: 0 0 20px; }
+@media (max-width: 620px) {
+  .cl-fee-grid { grid-template-columns: repeat(2, 1fr); }
   .cl-hero { padding: 48px 20px 40px; }
+  .cl-feature { padding: 16px; }
 }
 `;
