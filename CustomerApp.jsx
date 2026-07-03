@@ -474,6 +474,7 @@ function QuoteRequestModal({ contractors, onClose, onSubmit, defaultZip }) {
   const [budget, setBudget] = useState("");
   const [timeline, setTimeline] = useState("Within 2 weeks");
   const [zip, setZip] = useState(defaultZip || "");
+  const [address, setAddress] = useState("");
   const [photos, setPhotos] = useState([]); // { base64, thumbnailBase64, fileName, contentType, previewUrl }
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [photoError, setPhotoError] = useState(null);
@@ -577,6 +578,11 @@ function QuoteRequestModal({ contractors, onClose, onSubmit, defaultZip }) {
         </div>
 
         <label className="ph-field">
+          <span>Job address <span className="ph-muted small">(only shared with contractors after you confirm a job)</span></span>
+          <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="1234 Mockingbird Ln, Dallas TX 75205" />
+        </label>
+
+        <label className="ph-field">
           <span>Timeline</span>
           <select value={timeline} onChange={(e) => setTimeline(e.target.value)}>
             <option>As soon as possible</option>
@@ -622,7 +628,7 @@ function QuoteRequestModal({ contractors, onClose, onSubmit, defaultZip }) {
           type="button"
           className="ph-btn-primary"
           disabled={!canSubmit}
-          onClick={() => onSubmit({ description, budget, timeline, zip, photos })}
+          onClick={() => onSubmit({ description, budget, timeline, zip, address: address.trim() || null, photos })}
         >
           Send to {contractors.length} contractor{contractors.length === 1 ? "" : "s"}
         </button>
@@ -1694,6 +1700,7 @@ function HomeownerView({
         budget: form.budget,
         timeline: form.timeline,
         zip: form.zip,
+        address: form.address || null,
         contractorIds: selectedContractors.map((c) => c.id),
       });
 
@@ -2848,6 +2855,15 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
             {myStatus === "responded" && alreadyReported && (
               <div className="ph-inbox-actions">
                 <span className="ph-status-chip responded">job reported</span>
+              </div>
+            )}
+
+            {/* Show address + phone once homeowner marks complete (job confirmed) */}
+            {myRecipient?.homeownerMarkedComplete && (qr.address || qr.homeownerPhone) && (
+              <div style={{ marginTop: 8, background: "var(--ph-green-tint)", border: "1px solid #c7e0c2", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
+                <div style={{ fontWeight: 700, color: "var(--ph-green-text)", marginBottom: 6 }}>✓ Job confirmed — homeowner contact info</div>
+                {qr.address && <div style={{ color: "var(--ph-ink)", marginBottom: 2 }}>📍 {qr.address}</div>}
+                {qr.homeownerPhone && <div style={{ color: "var(--ph-ink)" }}>📞 {qr.homeownerPhone}</div>}
               </div>
             )}
 
