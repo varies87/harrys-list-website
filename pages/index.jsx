@@ -83,7 +83,7 @@ function LandingHero({ contractorCount }) {
               I&rsquo;m a contractor →
             </a>
           </div>
-          {contractorCount > 0 && (
+          {contractorCount >= 10 && (
             <p className="hl-hero-note">{contractorCount} local contractor{contractorCount === 1 ? "" : "s"} listed right now.</p>
           )}
         </div>
