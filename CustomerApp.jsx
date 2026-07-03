@@ -1522,15 +1522,18 @@ function ReviewGateModal({ onClose, unreviewedJobs, onReviewSubmitted }) {
 
   const allReviewed = unreviewedJobs.length > 0 && unreviewedJobs.every((j) => submitted.has(j.jobId));
 
+  const [reviewErrors, setReviewErrors] = useState({});
+
   const handleSubmitReview = async (job) => {
     const rating = ratings[job.jobId];
     if (!rating) return;
     setSubmitting((prev) => ({ ...prev, [job.jobId]: true }));
+    setReviewErrors((prev) => ({ ...prev, [job.jobId]: null }));
     try {
       await onReviewSubmitted(job, { rating, text: (texts[job.jobId] || "").trim() });
       setSubmitted((prev) => new Set([...prev, job.jobId]));
     } catch (err) {
-      // ignore — review form will stay open
+      setReviewErrors((prev) => ({ ...prev, [job.jobId]: err.message || "Could not submit review." }));
     } finally {
       setSubmitting((prev) => ({ ...prev, [job.jobId]: false }));
     }
@@ -1589,6 +1592,9 @@ function ReviewGateModal({ onClose, unreviewedJobs, onReviewSubmitted }) {
                 >
                   {submitting[job.jobId] ? "Submitting…" : "Submit review"}
                 </button>
+                {reviewErrors[job.jobId] && (
+                  <p style={{ fontSize: 12, color: "var(--ph-red-text)", marginTop: 6 }}>{reviewErrors[job.jobId]}</p>
+                )}
               </>
             )}
           </div>
