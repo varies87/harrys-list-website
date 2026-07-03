@@ -1369,9 +1369,14 @@ function HomeownerProfilePage({ homeowner, contractors, quoteRequests, onUpdate,
           );
         })}
       </div>
+
+      {/* Delete account */}
+      <div style={{ marginTop: 40, paddingTop: 20, borderTop: "1px solid var(--ph-sand-line)" }}>
+        <p className="ph-muted small" style={{ marginBottom: 8 }}>Need to delete your account? Email us at <a href="mailto:harry@harryslistdfw.com" style={{ color: "var(--ph-clay)" }}>harry@harryslistdfw.com</a> and we'll remove your data within 48 hours.</p>
+      </div>
     </div>
   );
-}
+} // end HomeownerProfilePage
 
 // ---------------------------------------------------------------------------
 // Inline review form -- star picker + text, shown under a job once the
@@ -1563,6 +1568,25 @@ function HomeownerView({
     try {
       const data = await apiCall("estimates", { action: "respond", estimateRequestId, status });
       setEstimateRequests((prev) => prev.map((r) => r.id === estimateRequestId ? data.estimateRequest : r));
+    } catch (err) {
+      setConfirmation({ text: err.message, isError: true });
+      setTimeout(() => setConfirmation(null), 5000);
+    }
+  };
+
+  const handleAcceptQuote = async (quoteRequestId, contractorId) => {
+    try {
+      await apiCall("quotes", { action: "acceptQuote", quoteRequestId, contractorId });
+      setQuoteRequests((prev) => prev.map((qr) =>
+        qr.id !== quoteRequestId ? qr : {
+          ...qr,
+          recipients: qr.recipients.map((r) =>
+            idsMatch(r.contractorId, contractorId) ? { ...r, homeownerAccepted: true } : r
+          ),
+        }
+      ));
+      setConfirmation("Quote accepted! The contractor has been notified and will be in touch.");
+      setTimeout(() => setConfirmation(null), 5000);
     } catch (err) {
       setConfirmation({ text: err.message, isError: true });
       setTimeout(() => setConfirmation(null), 5000);
@@ -2050,16 +2074,35 @@ function HomeownerView({
                             )}
                           </div>
                         ) : (
-                          <span className={`ph-status-chip ${r.status}`}>{r.status}</span>
+                          (() => {
+                            const c = contractors.find((con) => idsMatch(con.id, r.contractorId));
+                            if (r.status === "sent" && c?.isSuspended) {
+                              return <span className="ph-status-chip declined" title="This contractor has an overdue fee and is temporarily unlisted.">⚠ contractor suspended</span>;
+                            }
+                            return <span className={`ph-status-chip ${r.status}`}>{r.status}</span>;
+                          })()
                         )}
                         {r.status === "responded" && !r.jobReported && !r.homeownerMarkedComplete && (
-                          <button
-                            className="ph-btn-secondary"
-                            style={{ fontSize: 11, padding: "3px 10px" }}
-                            onClick={() => handleMarkComplete(qr.id, r.contractorId)}
-                          >
-                            Mark job as complete
-                          </button>
+                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                            {!r.homeownerAccepted ? (
+                              <button
+                                className="ph-btn-primary"
+                                style={{ fontSize: 11, padding: "5px 12px" }}
+                                onClick={() => handleAcceptQuote(qr.id, r.contractorId)}
+                              >
+                                ✓ Accept quote
+                              </button>
+                            ) : (
+                              <span className="ph-status-chip responded">✓ Accepted</span>
+                            )}
+                            <button
+                              className="ph-btn-secondary"
+                              style={{ fontSize: 11, padding: "3px 10px" }}
+                              onClick={() => handleMarkComplete(qr.id, r.contractorId)}
+                            >
+                              Mark job as complete
+                            </button>
+                          </div>
                         )}
                         {r.homeownerMarkedComplete && !r.jobReported && (
                           <span className="ph-muted small" style={{ color: "#E8A33D" }}>⚠ You marked this complete — awaiting contractor report</span>
@@ -2855,6 +2898,13 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
             {myStatus === "responded" && alreadyReported && (
               <div className="ph-inbox-actions">
                 <span className="ph-status-chip responded">job reported</span>
+              </div>
+            )}
+
+            {/* Show accepted badge when homeowner accepted the quote */}
+            {myStatus === "responded" && !alreadyReported && myRecipient?.homeownerAccepted && (
+              <div style={{ marginBottom: 8 }}>
+                <span className="ph-status-chip responded">✓ Homeowner accepted your quote</span>
               </div>
             )}
 
