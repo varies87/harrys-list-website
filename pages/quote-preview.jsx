@@ -8,11 +8,13 @@ export default function QuotePreviewPage() {
 
   useEffect(() => {
     if (!router.isReady) return;
-    const { contractor, trade, description, items, total, message, type } = router.query;
+    const { contractor, trade, customer, address, description, items, total, message, type } = router.query;
     try {
       setData({
         contractor: contractor || "Contractor",
         trade: trade || "",
+        customer: customer || "",
+        address: address || "",
         description: description || "",
         items: items ? JSON.parse(items) : [],
         total: parseFloat(total) || 0,
@@ -72,6 +74,16 @@ export default function QuotePreviewPage() {
 
           {/* Body */}
           <div style={{ padding: "26px 36px 32px" }}>
+
+            {/* Bill to -- invoices only. By invoice time the contractor has
+                the customer's details (job is done); quotes stay private. */}
+            {isInvoice && (data.customer || data.address) && (
+              <div style={{ marginBottom: 22 }}>
+                <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#9AA29A", marginBottom: 4 }}>Bill to</div>
+                {data.customer && <div style={{ fontSize: 14.5, fontWeight: 600, color: "#1C2B22" }}>{data.customer}</div>}
+                {data.address && <div style={{ fontSize: 13.5, color: "#3D4F42", marginTop: 2 }}>{data.address}</div>}
+              </div>
+            )}
 
             <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
               <button

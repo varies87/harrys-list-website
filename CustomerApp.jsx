@@ -1976,7 +1976,7 @@ function HomeownerView({
                     className="ph-btn-secondary"
                     style={{ fontSize: 12, padding: "5px 12px", alignSelf: "flex-start" }}
                     onClick={() => {
-                      window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&trade=${encodeURIComponent(contractor.trade || "")}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
+                      window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&trade=${encodeURIComponent(contractor.trade || "")}&customer=${encodeURIComponent(job.homeownerName || "")}&address=${encodeURIComponent(job.address || "")}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
                     }}
                   >
                     View invoice →
@@ -6246,6 +6246,8 @@ export function ContractorInvoicePreviewScreen({ contractor }) {
     const params = new URLSearchParams({
       contractor: contractor.businessName || "Your business",
       trade: contractor.trade || "",
+      customer: type === "invoice" ? "Jordan Alvarez (sample customer)" : "",
+      address: type === "invoice" ? "1234 Elm St, Dallas, TX 75201" : "",
       description: "Sample job — this is what your customers will see.",
       items: JSON.stringify(sampleItems),
       total: String(sampleTotal),
