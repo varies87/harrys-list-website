@@ -301,7 +301,7 @@ function ContractorCard({ contractor, selected, onToggleSelect, onViewProfile, i
               <span className="ph-rating-text">{avgRating.toFixed(1)} ({contractor.reviews.length})</span>
             </>
           ) : (
-            <span className="ph-rating-text muted">No reviews yet</span>
+            <span className="ph-rating-text muted">No verified reviews yet</span>
           )}
         </div>
         <div className="ph-thumbs">
@@ -1738,6 +1738,9 @@ function HomeownerView({
           Contractors never pay to be listed or to receive your request. They only pay a small percentage after
           a job is done and you've confirmed it — so nobody here is buying their way to the top of your search.
         </span>
+        <span style={{ marginTop: 4, color: "rgba(253,251,246,0.6)", fontSize: 12 }}>
+          ✓ All reviews are from verified completed jobs — not open to the public.
+        </span>
       </div>
 
       {jobsToConfirm.length > 0 && (
@@ -2430,9 +2433,7 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
 
   const startComposing = (qr) => {
     setComposingFor(qr.id);
-    const digitsOnly = qr.budget ? qr.budget.replace(/[^0-9.]/g, "") : "";
-    const looksLikeSingleNumber = qr.budget && /^\$?[\d,]+(\.\d+)?$/.test(qr.budget.trim());
-    setQuotePrice(looksLikeSingleNumber ? digitsOnly : "");
+    setQuotePrice("");
     setQuoteMessage("");
   };
 
@@ -5441,6 +5442,9 @@ export function ContractorPublicProfile() {
             {contractor.reviews.length > 0 && (
               <>
                 <div className="pp-section-title">Reviews</div>
+                <p style={{ fontSize: 12, color: "var(--ph-taupe-soft)", marginBottom: 12 }}>
+                  ✓ All reviews are from verified completed jobs — only homeowners who hired and paid this contractor can leave a review.
+                </p>
                 {contractor.reviews.map((r) => (
                   <div className="pp-review" key={r.id}>
                     <Stars value={r.rating} />
