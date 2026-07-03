@@ -98,7 +98,7 @@ function ContractorHero() {
             No pay-per-lead. No monthly fee. No cost to list. You pay one small percentage
             only after a homeowner confirms the job is done.
           </p>
-          <a href="#portal" className="cl-btn cl-btn-primary" onClick={scrollToPortal}>
+          <a href="#portal" className="cl-btn cl-btn-primary cl-btn-lg" onClick={scrollToPortal}>
             List your business free →
           </a>
         </div>
@@ -150,7 +150,7 @@ function ContractorHero() {
         <div className="cl-closer">
           <div className="cl-closer-title">Free to join. Free to list. Free to quote.</div>
           <p className="cl-closer-sub">You only ever pay after you've been paid for a completed job.</p>
-          <a href="#portal" className="cl-btn cl-btn-primary" onClick={scrollToPortal}>
+          <a href="#portal" className="cl-btn cl-btn-primary cl-btn-lg" onClick={scrollToPortal}>
             List your business today →
           </a>
         </div>
@@ -202,6 +202,7 @@ const CONTRACTOR_LANDING_STYLES = `
   display: inline-block; padding: 13px 26px; border-radius: 8px; font-weight: 700;
   font-size: 15px; text-decoration: none; transition: transform 0.15s ease, background 0.15s ease;
 }
+.cl-btn-lg { padding: 16px 34px; font-size: 17px; border-radius: 10px; }
 .cl-btn-primary { background: var(--cl-clay); color: #fff; }
 .cl-btn-primary:hover { background: var(--cl-clay-dark); transform: translateY(-1px); }
 .cl-section { max-width: 720px; margin: 0 auto; padding: 40px 24px 0; }

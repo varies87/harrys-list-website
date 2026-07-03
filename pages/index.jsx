@@ -93,10 +93,10 @@ function LandingHero({ contractorCount }) {
             small fee after a job is actually done &mdash; confirmed by the homeowner, not claimed by the contractor.
           </p>
           <div className="hl-cta-row">
-            <a href="#directory" className="hl-btn hl-btn-primary" onClick={scrollToDirectory}>
+            <a href="#directory" className="hl-btn hl-btn-primary hl-btn-lg" onClick={scrollToDirectory}>
               Find a contractor →
             </a>
-            <a href="/contractors" className="hl-btn hl-btn-secondary">
+            <a href="/contractors" className="hl-btn hl-btn-secondary hl-btn-lg">
               I&rsquo;m a contractor →
             </a>
           </div>
@@ -194,6 +194,7 @@ const LANDING_STYLES = `
   text-decoration: none;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
+.hl-btn-lg { padding: 15px 30px; font-size: 16.5px; border-radius: 10px; }
 .hl-btn-primary { background: var(--hl-clay); color: #fff; }
 .hl-btn-primary:hover { background: var(--hl-clay-dark); transform: translateY(-1px); }
 .hl-btn-secondary { background: rgba(255,255,255,0.08); color: #FDFBF6; border: 1.5px solid rgba(255,255,255,0.35); }
