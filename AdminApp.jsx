@@ -68,7 +68,7 @@ function AdminSignIn({ onAuthed, error, loading }) {
 // ---------------------------------------------------------------------------
 // One row in the approval queue
 // ---------------------------------------------------------------------------
-function QueueRow({ contractor, onApprove, onReject, busy }) {
+function QueueRow({ contractor, onApprove, onReject, onArchive, busy }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -113,6 +113,14 @@ function QueueRow({ contractor, onApprove, onReject, busy }) {
               <span className="ad-detail-label">Submitted</span>
               <span className="ad-detail-value">{timeAgo(contractor.createdAt)}</span>
             </div>
+            <div>
+              <span className="ad-detail-label">Email</span>
+              <span className="ad-detail-value">{contractor.email || "—"}</span>
+            </div>
+            <div>
+              <span className="ad-detail-label">Status</span>
+              <span className="ad-detail-value">{contractor.status}</span>
+            </div>
           </div>
           <div className="ad-row-actions">
             <button
@@ -123,6 +131,16 @@ function QueueRow({ contractor, onApprove, onReject, busy }) {
             >
               Reject
             </button>
+            {onArchive && (
+              <button
+                type="button"
+                className="ad-btn ad-btn-archive"
+                disabled={busy}
+                onClick={() => onArchive(contractor.id)}
+              >
+                Archive
+              </button>
+            )}
             <button
               type="button"
               className="ad-btn ad-btn-approve"
@@ -337,11 +355,13 @@ function DisputeRow({ dispute }) {
 // Main console
 // ---------------------------------------------------------------------------
 function AdminConsole({ password, onLogout }) {
-  const [activeTab, setActiveTab] = useState("metrics"); // "metrics" | "queue" | "flagged" | "disputes" | "unreported"
+  const [activeTab, setActiveTab] = useState("metrics");
   const [pending, setPending] = useState([]);
   const [flagged, setFlagged] = useState([]);
   const [disputes, setDisputes] = useState([]);
   const [unreported, setUnreported] = useState([]);
+  const [archived, setArchived] = useState([]);
+  const [archivedLoading, setArchivedLoading] = useState(false);
   const [metrics, setMetrics] = useState(null);
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -361,6 +381,18 @@ function AdminConsole({ password, onLogout }) {
       setError(err.message);
     } finally {
       setMetricsLoading(false);
+    }
+  };
+
+  const loadArchived = async () => {
+    setArchivedLoading(true);
+    try {
+      const data = await apiCall("contractors", { action: "listArchived", adminPassword: password });
+      setArchived(data.contractors || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setArchivedLoading(false);
     }
   };
 
@@ -432,6 +464,9 @@ function AdminConsole({ password, onLogout }) {
     }
     if (activeTab === "unreported" && unreported.length === 0 && !unreportedLoading) {
       loadUnreported();
+    }
+    if (activeTab === "archived" && archived.length === 0 && !archivedLoading) {
+      loadArchived();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
@@ -531,6 +566,14 @@ function AdminConsole({ password, onLogout }) {
         >
           Unreported jobs
           {unreported.length > 0 && <span className="ad-tab-badge ad-tab-badge-red">{unreported.length}</span>}
+        </button>
+        <button
+          type="button"
+          className={`ad-tab ${activeTab === "archived" ? "is-active" : ""}`}
+          onClick={() => setActiveTab("archived")}
+        >
+          Archived
+          {archived.length > 0 && <span className="ad-tab-badge">{archived.length}</span>}
         </button>
       </div>
 
@@ -711,6 +754,7 @@ function AdminConsole({ password, onLogout }) {
                     contractor={c}
                     onApprove={(id) => handleDecision(id, "approved")}
                     onReject={(id) => handleDecision(id, "rejected")}
+                    onArchive={(id) => handleDecision(id, "archived")}
                     busy={busyId === c.id}
                   />
                 ))}
@@ -843,6 +887,39 @@ function AdminConsole({ password, onLogout }) {
             )}
           </div>
         )}
+        {/* ── Archived contractors tab ── */}
+        {activeTab === "archived" && (
+          <div className="ad-tab-content">
+            <div className="ad-queue-header">
+              <div>
+                <div className="ad-queue-count">{archivedLoading ? "—" : archived.length}</div>
+                <div className="ad-queue-label">archived contractor{archived.length === 1 ? "" : "s"}</div>
+              </div>
+            </div>
+            {archivedLoading && <div className="ad-empty">Loading…</div>}
+            {!archivedLoading && archived.length === 0 && (
+              <div className="ad-empty">
+                <div className="ad-empty-mark">✓</div>
+                <div className="ad-empty-title">No archived contractors</div>
+                <p>Archive a contractor from the Approval queue to remove them from the directory without deleting their data.</p>
+              </div>
+            )}
+            {!archivedLoading && archived.length > 0 && (
+              <div className="ad-queue">
+                {archived.map((c) => (
+                  <QueueRow
+                    key={c.id}
+                    contractor={c}
+                    onApprove={(id) => handleDecision(id, "approved")}
+                    onReject={(id) => handleDecision(id, "rejected")}
+                    busy={busyId === c.id}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
       </main>
 
       <style>{ADMIN_STYLES}</style>
@@ -1077,7 +1154,10 @@ const ADMIN_STYLES = `
 }
 .ad-low-report-reason-missing { color: #6b7280; font-style: italic; }
 
-.ad-flagged-actions {
+.ad-btn-archive {
+  background: #3d2f0e; color: #f0c060; border: 1px solid #5a4510;
+}
+.ad-btn-archive:hover:not(:disabled) { background: #4a3a10; }
   border-top: 1px solid #23262b; padding-top: 16px; display: flex; flex-direction: column; gap: 10px;
 }
 .ad-flagged-btn-row { display: flex; gap: 8px; }
@@ -1122,8 +1202,8 @@ const ADMIN_STYLES = `
   padding: 18px 20px 14px; border-bottom: 1px solid #1c2333;
 }
 .ad-metrics-block-label {
-  font-family: ui-monospace,"SF Mono",Menlo,monospace; font-size: 9px;
-  color: #484f58; letter-spacing: 0.1em; margin-bottom: 14px;
+  font-family: ui-monospace,"SF Mono",Menlo,monospace; font-size: 11px;
+  color: #58a6ff; letter-spacing: 0.1em; margin-bottom: 14px; font-weight: 600;
 }
 .ad-metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .ad-metrics-row-4 { grid-template-columns: repeat(4, 1fr); }
@@ -1135,14 +1215,14 @@ const ADMIN_STYLES = `
 .ad-mc-warn { border-color: #3d2f0e; }
 .ad-mc-danger { border-color: #3d1515; }
 .ad-mc-key {
-  font-family: ui-monospace,"SF Mono",Menlo,monospace; font-size: 9px;
-  color: #484f58; letter-spacing: 0.1em; text-transform: lowercase;
+  font-family: ui-monospace,"SF Mono",Menlo,monospace; font-size: 12px;
+  color: #8b949e; letter-spacing: 0.04em;
 }
 .ad-mc-val {
   font-family: ui-monospace,"SF Mono",Menlo,monospace; font-size: 22px;
   font-weight: 700; color: #e6edf3; line-height: 1;
 }
-.ad-mc-val-lg { font-size: 32px; }
+.ad-mc-val-lg { font-size: 52px; }
 .ad-mc-warn .ad-mc-val { color: #f0c060; }
 .ad-mc-danger .ad-mc-val { color: #ff8a80; }
 .ad-mc-bar { height: 2px; background: #21262d; border-radius: 1px; overflow: hidden; }
@@ -1155,15 +1235,15 @@ const ADMIN_STYLES = `
 .ad-mc-stat-list { display: flex; flex-direction: column; gap: 0; }
 .ad-mc-stat {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 0; border-bottom: 1px solid #1c2333;
+  padding: 14px 0; border-bottom: 1px solid #1c2333;
 }
 .ad-mc-stat:last-child { border-bottom: none; }
 .ad-mc-stat-label {
-  font-family: ui-monospace,"SF Mono",Menlo,monospace; font-size: 10px;
-  color: #6b7280; letter-spacing: 0.06em;
+  font-family: ui-monospace,"SF Mono",Menlo,monospace; font-size: 13px;
+  color: #8b949e; letter-spacing: 0.02em;
 }
 .ad-mc-stat-val {
-  font-family: ui-monospace,"SF Mono",Menlo,monospace; font-size: 14px;
+  font-family: ui-monospace,"SF Mono",Menlo,monospace; font-size: 22px;
   font-weight: 700; color: #e6edf3;
 }
 `;
