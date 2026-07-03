@@ -3049,6 +3049,15 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
               </div>
             )}
 
+            {/* Show address + phone when homeowner accepted */}
+            {myRecipient?.homeownerAccepted && (qr.address || qr.homeownerPhone) && (
+              <div style={{ marginTop: 4, marginBottom: 8, background: "var(--ph-green-tint)", border: "1px solid #c7e0c2", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
+                <div style={{ fontWeight: 700, color: "var(--ph-green-text)", marginBottom: 6 }}>📬 Homeowner contact info</div>
+                {qr.address && <div style={{ color: "var(--ph-ink)", marginBottom: 2 }}>📍 {qr.address}</div>}
+                {qr.homeownerPhone && <div style={{ color: "var(--ph-ink)" }}>📞 {qr.homeownerPhone}</div>}
+              </div>
+            )}
+
             {/* Show address + phone once homeowner marks complete (job confirmed) */}
             {myRecipient?.homeownerMarkedComplete && (qr.address || qr.homeownerPhone) && (
               <div style={{ marginTop: 8, background: "var(--ph-green-tint)", border: "1px solid #c7e0c2", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
