@@ -327,7 +327,7 @@ function ContractorCard({ contractor, selected, onToggleSelect, onViewProfile, i
 // ---------------------------------------------------------------------------
 // Contractor profile modal
 // ---------------------------------------------------------------------------
-function ContractorProfileModal({ contractor, onClose, currentHomeowner, onToggleThumbsUp, onRequestQuote }) {
+function ContractorProfileModal({ contractor, onClose, currentHomeowner, onToggleThumbsUp, onRequestQuote, onRequireAuth }) {
   const [alreadyThumbsUpped, setAlreadyThumbsUpped] = useState(false);
   const [thumbsUpBusy, setThumbsUpBusy] = useState(false);
   const [statusLoaded, setStatusLoaded] = useState(false);
@@ -474,7 +474,9 @@ function ContractorProfileModal({ contractor, onClose, currentHomeowner, onToggl
               </button>
             </>
           ) : (
-            <p className="ph-muted small">Sign in to request a quote or thumbs up this contractor.</p>
+            <button type="button" className="ph-btn-secondary" onClick={() => onRequireAuth?.()}>
+              Sign in to request a quote or thumbs up this contractor
+            </button>
           )}
         </div>
       </div>
@@ -1641,6 +1643,7 @@ function HomeownerView({
   currentHomeowner,
   onToggleFavorite,
   onToggleThumbsUp,
+  onRequireAuth,
 }) {
   const [tradeFilter, setTradeFilter] = useState("All trades");
   const [cityFilter, setCityFilter] = useState("All cities");
@@ -1986,6 +1989,13 @@ function HomeownerView({
           className="ph-btn-primary"
           disabled={selectedIds.size === 0}
           onClick={() => {
+            // Signed-out visitors can browse and select contractors, but need
+            // an account to actually submit a request -- prompt sign-in here
+            // rather than letting them fill out the whole form first.
+            if (!currentHomeowner) {
+              onRequireAuth?.();
+              return;
+            }
             // Block if homeowner has any completed jobs without a review
             // Check 1: jobs homeowner marked complete but hasn't reviewed
             const hasUnreviewedMarked = myQuoteRequests.some((qr) =>
@@ -2323,6 +2333,7 @@ function HomeownerView({
         onClose={() => setProfileContractor(null)}
         currentHomeowner={currentHomeowner}
         onToggleThumbsUp={onToggleThumbsUp}
+        onRequireAuth={onRequireAuth}
         onRequestQuote={(c) => {
           setProfileContractor(null);
           setQuoteTargetContractors([c]);
@@ -3766,40 +3777,64 @@ export default function CustomerApp() {
               </FadeIn>
             )}
 
-            {!currentHomeowner && homeownerScreen !== "register" && (
+            {!currentHomeowner && homeownerScreen === "signin" && (
               <FadeIn keyValue="homeowner-auth">
-                <HomeownerAuth onSignedUp={handleHomeownerSignedUp} onSignedIn={handleHomeownerSignedIn} />
+                <div className="ph-auth-card">
+                  <button type="button" className="ph-link-btn" onClick={() => setHomeownerScreen("directory")}>
+                    ← Back to browsing
+                  </button>
+                  <HomeownerAuth onSignedUp={handleHomeownerSignedUp} onSignedIn={handleHomeownerSignedIn} />
+                </div>
               </FadeIn>
             )}
 
-            {currentHomeowner && (
+            {/*
+             * Browsing the directory no longer requires an account (matches
+             * the "no account needed to browse" promise on the homepage).
+             * Signed-in homeowners see their account bar and profile/directory
+             * screens as before; signed-out visitors see a lightweight guest
+             * bar instead, and are only prompted to sign in when they try to
+             * actually request a quote or thumbs up a contractor.
+             */}
+            {(currentHomeowner || (homeownerScreen !== "register" && homeownerScreen !== "signin")) && (
               <>
-                {showWelcome && (
+                {currentHomeowner && showWelcome && (
                   <WelcomeModal onClose={() => {
                     localStorage.setItem("harryslist_welcomed", "true");
                     setShowWelcome(false);
                   }} />
                 )}
-                <button
-                  type="button"
-                  className="ph-info-btn"
-                  onClick={() => setShowWelcome(true)}
-                  aria-label="How Harry's List works"
-                  title="How it works"
-                >
-                  ?
-                </button>
+                {currentHomeowner && (
+                  <button
+                    type="button"
+                    className="ph-info-btn"
+                    onClick={() => setShowWelcome(true)}
+                    aria-label="How Harry's List works"
+                    title="How it works"
+                  >
+                    ?
+                  </button>
+                )}
                 <FadeIn keyValue={`homeowner-${homeownerScreen}`}>
                   <div>
-                  <HomeownerAccountBar
-                    homeowner={currentHomeowner}
-                    onOpenProfile={() => setHomeownerScreen("profile")}
-                    onLogout={() => {
-                      handleHomeownerLogout();
-                      setHomeownerScreen("directory");
-                    }}
-                  />
-                  {homeownerScreen === "profile" ? (
+                  {currentHomeowner ? (
+                    <HomeownerAccountBar
+                      homeowner={currentHomeowner}
+                      onOpenProfile={() => setHomeownerScreen("profile")}
+                      onLogout={() => {
+                        handleHomeownerLogout();
+                        setHomeownerScreen("directory");
+                      }}
+                    />
+                  ) : (
+                    <div className="ph-guest-bar">
+                      <span className="ph-guest-bar-text">Browsing as a guest</span>
+                      <button type="button" className="ph-btn-secondary" onClick={() => setHomeownerScreen("signin")}>
+                        Sign in
+                      </button>
+                    </div>
+                  )}
+                  {homeownerScreen === "profile" && currentHomeowner ? (
                     <HomeownerProfilePage
                       homeowner={currentHomeowner}
                       contractors={contractors}
@@ -3820,6 +3855,7 @@ export default function CustomerApp() {
                       currentHomeowner={currentHomeowner}
                       onToggleFavorite={handleToggleFavorite}
                       onToggleThumbsUp={handleToggleThumbsUp}
+                      onRequireAuth={() => setHomeownerScreen("signin")}
                     />
                   )}
                 </div>
@@ -5045,6 +5081,19 @@ const CUSTOMER_STYLES = `
   box-shadow: var(--ph-shadow-md); margin: 48px auto 0; min-height: 420px;
 }
 .ph-auth-card h2 { font-size: 21px; margin: 0 0 8px; font-family: var(--ph-serif); font-weight: 700; }
+
+.ph-link-btn {
+  background: none; border: none; padding: 0; margin-bottom: 16px; cursor: pointer;
+  color: var(--ph-taupe); font-size: 13px; font-weight: 600; font-family: inherit;
+}
+.ph-link-btn:hover { color: var(--ph-ink); text-decoration: underline; }
+
+.ph-guest-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--ph-surface); border: 1px solid var(--ph-sand-line); border-radius: var(--ph-radius-md);
+  padding: 12px 16px; margin-bottom: 16px;
+}
+.ph-guest-bar-text { font-size: 13.5px; color: var(--ph-ink-soft); font-weight: 600; }
 
 .ph-auth-mode-switch {
   display: flex; gap: 3px; background: var(--ph-sand-line); border-radius: 999px; padding: 4px; margin-bottom: 20px;
