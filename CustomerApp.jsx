@@ -36,6 +36,17 @@ function activateOnKey(handler) {
   };
 }
 
+// Error line that scrolls itself into view when it mounts, so a form error
+// (which renders near the submit button) isn't missed on a longer form where
+// the button may be below the fold. Used by the auth forms.
+function AuthError({ children }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
+  return <p ref={ref} className="ph-stripe-inline-error">{children}</p>;
+}
+
 function ServiceAreaPicker({ selection, onChange }) {
   const [expandedRegions, setExpandedRegions] = useState(() => new Set(ZIP_DATA.regions.map((r) => r.region)));
 
@@ -651,6 +662,15 @@ function QuoteRequestModal({ contractors, onClose, onSubmit, defaultZip }) {
         >
           Send to {contractors.length} contractor{contractors.length === 1 ? "" : "s"}
         </button>
+        {!canSubmit && (
+          <p className="ph-muted small" style={{ marginTop: 8, textAlign: "center" }}>
+            {uploadingPhotos
+              ? "Finishing photo upload…"
+              : contractors.length === 0
+              ? "Select at least one contractor first."
+              : "Add a short description of the job to continue."}
+          </p>
+        )}
       </div>
     </Modal>
   );
@@ -910,6 +930,15 @@ function HomeownerAuth({ onSignedUp, onSignedIn }) {
     name.trim() && email.trim().includes("@") && zip.trim().length === 5 && phone.trim().length >= 10 && password.length >= 8;
   const canSubmitSignIn = email.trim().includes("@") && password.length > 0;
 
+  // Specific, friendly hint for what's still needed, so the disabled button
+  // isn't a silent dead end.
+  const signUpMissing = [];
+  if (!name.trim()) signUpMissing.push("your name");
+  if (!email.trim().includes("@")) signUpMissing.push("a valid email");
+  if (zip.trim().length !== 5) signUpMissing.push("a 5-digit zip");
+  if (phone.trim().length < 10) signUpMissing.push("a phone number");
+  if (password.length < 8) signUpMissing.push("an 8+ character password");
+
   const handleSignUp = async () => {
     setSubmitting(true);
     setError(null);
@@ -987,10 +1016,15 @@ function HomeownerAuth({ onSignedUp, onSignedIn }) {
             <span>Password (8+ characters)</span>
             <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="••••••••" />
           </label>
-          {error && <p className="ph-stripe-inline-error">{error}</p>}
+          {error && <AuthError>{error}</AuthError>}
           <button type="button" className="ph-btn-primary" disabled={!canSubmitSignUp || submitting} onClick={handleSignUp}>
             {submitting ? "Creating account…" : "Create account"}
           </button>
+          {!canSubmitSignUp && signUpMissing.length > 0 && (
+            <p className="ph-muted small" style={{ marginTop: 8, textAlign: "center" }}>
+              Still need: {signUpMissing.join(", ")}.
+            </p>
+          )}
         </>
       ) : (
         <>
@@ -1004,7 +1038,7 @@ function HomeownerAuth({ onSignedUp, onSignedIn }) {
             <span>Password</span>
             <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="••••••••" />
           </label>
-          {error && <p className="ph-stripe-inline-error">{error}</p>}
+          {error && <AuthError>{error}</AuthError>}
           <button type="button" className="ph-btn-primary" disabled={!canSubmitSignIn || submitting} onClick={handleSignIn}>
             {submitting ? "Signing in…" : "Sign in"}
           </button>
@@ -1128,7 +1162,7 @@ function ContractorAuth({ onSignedUp, onSignedIn }) {
             <span>Password (8+ characters)</span>
             <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="••••••••" />
           </label>
-          {error && <p className="ph-stripe-inline-error">{error}</p>}
+          {error && <AuthError>{error}</AuthError>}
           <button type="button" className="ph-btn-primary" disabled={!canSubmitSignUp || submitting} onClick={handleSignUp}>
             {submitting ? "Creating account…" : "Create account"}
           </button>
@@ -1145,7 +1179,7 @@ function ContractorAuth({ onSignedUp, onSignedIn }) {
             <span>Password</span>
             <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="••••••••" />
           </label>
-          {error && <p className="ph-stripe-inline-error">{error}</p>}
+          {error && <AuthError>{error}</AuthError>}
           <button type="button" className="ph-btn-primary" disabled={!canSubmitSignIn || submitting} onClick={handleSignIn}>
             {submitting ? "Signing in…" : "Sign in"}
           </button>
@@ -1824,6 +1858,14 @@ function HomeownerView({
     ? quoteRequests.filter((qr) => idsMatch(qr.homeownerId, currentHomeowner.id))
     : [];
 
+  // Count responded quotes the homeowner hasn't acted on yet, so returning
+  // visitors see an in-app nudge (not just the email).
+  const newResponseCount = myQuoteRequests.reduce((sum, qr) => {
+    return sum + qr.recipients.filter(
+      (r) => r.status === "responded" && !r.homeownerAccepted && !r.homeownerMarkedComplete && !r.jobReported
+    ).length;
+  }, 0);
+
   const handleSubmitQuote = async (form) => {
     try {
       const data = await apiCall("quotes", {
@@ -1871,6 +1913,17 @@ function HomeownerView({
 
   return (
     <div>
+      {newResponseCount > 0 && (
+        <button
+          type="button"
+          className="ph-response-banner"
+          onClick={() => {
+            document.getElementById("my-quote-requests")?.scrollIntoView({ behavior: "smooth" });
+          }}
+        >
+          ▲ You have {newResponseCount} new quote response{newResponseCount === 1 ? "" : "s"} — tap to review
+        </button>
+      )}
       <div className="ph-trust-banner">
         <strong>No pay-per-lead. Ever.</strong>
         <span>
@@ -2191,12 +2244,37 @@ function HomeownerView({
           />
         ))}
         {filtered.length === 0 && (
-          <div className="ph-empty">No contractors match these filters yet.</div>
+          <div className="ph-empty">
+            {tradeFilter !== "All trades" || cityFilter !== "All cities" ? (
+              <>
+                <strong>No contractors match these filters yet.</strong>
+                <p className="ph-muted small" style={{ marginTop: 6 }}>
+                  Try removing a filter to see more. We're adding contractors across DFW regularly.
+                </p>
+                <button
+                  type="button"
+                  className="ph-btn-secondary"
+                  style={{ marginTop: 10 }}
+                  onClick={() => { setTradeFilter("All trades"); setCityFilter("All cities"); }}
+                >
+                  Clear filters
+                </button>
+              </>
+            ) : (
+              <>
+                <strong>No contractors listed here just yet.</strong>
+                <p className="ph-muted small" style={{ marginTop: 6 }}>
+                  Harry's List is growing across Dallas–Fort Worth — new contractors are being added regularly.
+                  Check back soon, or send a request and we'll help connect you.
+                </p>
+              </>
+            )}
+          </div>
         )}
       </div>
 
       {currentHomeowner && myQuoteRequests.length > 0 && (
-        <div className="ph-section">
+        <div className="ph-section" id="my-quote-requests">
           <h3>Your quote requests</h3>
           {myQuoteRequests.map((qr) => (
             <div className="ph-qr-card" key={qr.id}>
@@ -2465,7 +2543,9 @@ function ContractorOnboarding({ onCreate, onEdit, editingContractor }) {
             bio,
             licenseInfo: license || "Not provided",
             serviceArea,
-            status: "pending",
+            // status is intentionally NOT sent -- it's managed server-side
+            // (an approved listing goes to re-review automatically when a
+            // sensitive field changes; see updateMyContractor).
           },
           logoFile
         );
@@ -2575,6 +2655,17 @@ function ContractorOnboarding({ onCreate, onEdit, editingContractor }) {
       <button type="button" className="ph-btn-primary" disabled={!canSubmit} onClick={handleSubmit}>
         {submitting ? "Submitting…" : isEditing ? "Resubmit for approval" : "Submit profile for approval"}
       </button>
+      {!canSubmit && !submitting && (() => {
+        const missing = [];
+        if (!businessName.trim()) missing.push("business name");
+        if (!bio.trim()) missing.push("a short bio");
+        if (resolveSelection(serviceArea).size === 0) missing.push("at least one service area zip");
+        return missing.length > 0 ? (
+          <p className="ph-muted small" style={{ marginTop: 8, textAlign: "center" }}>
+            Still need: {missing.join(", ")}.
+          </p>
+        ) : null;
+      })()}
     </div>
   );
 }
@@ -2805,7 +2896,15 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
         </div>
       )}
       <h2>Quote requests</h2>
-      {myRequests.length === 0 && <p className="ph-muted">No quote requests yet. They'll show up here as homeowners reach out.</p>}
+      {myRequests.length === 0 && (
+        <div className="ph-empty" style={{ padding: "40px 0" }}>
+          <strong>No quote requests yet.</strong>
+          <p className="ph-muted small" style={{ marginTop: 6 }}>
+            They'll appear here automatically as homeowners in your service area reach out.
+            Adding portfolio photos and a clear bio helps you show up well when they do.
+          </p>
+        </div>
+      )}
       {myRequests.map((qr) => {
         const myRecipient = qr.recipients.find((r) => idsMatch(r.contractorId, contractor.id));
         const myStatus = myRecipient?.status;
@@ -4593,6 +4692,18 @@ const CUSTOMER_STYLES = `
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+/* Accessibility: honor the OS "reduce motion" setting -- the infinite trade
+   marquee and other animations can trigger motion sickness. This freezes the
+   marquee (showing a static row) and neutralizes transitions/animations. */
+@media (prefers-reduced-motion: reduce) {
+  .ph-marquee-track { animation: none; flex-wrap: wrap; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 .ph-trade-pill {
   flex-shrink: 0;
   background: var(--ph-surface);
@@ -4738,6 +4849,22 @@ const CUSTOMER_STYLES = `
   border-color: #E3BCA8;
 }
 
+.ph-response-banner {
+  display: block;
+  width: 100%;
+  text-align: center;
+  background: var(--ph-clay);
+  color: #fff;
+  border: none;
+  border-radius: var(--ph-radius-md);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+.ph-response-banner:hover { background: var(--ph-clay-dark); }
 .ph-trust-banner {
   background: var(--ph-ink);
   background-image: linear-gradient(135deg, #233a2d 0%, var(--ph-ink) 100%);
