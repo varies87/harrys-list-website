@@ -85,6 +85,7 @@ function ContractorHero() {
             <div>
               <div className="cl-step-title">Only pay after you're paid</div>
               <p className="cl-step-body">A small percentage fee applies only once the homeowner confirms the job is complete &mdash; never upfront, never for a lead that goes nowhere.</p>
+              <p className="cl-step-body cl-step-note">You collect payment from the homeowner directly, however you normally invoice. Harry's List only charges its fee, automatically, after they confirm.</p>
             </div>
           </div>
         </div>
@@ -174,6 +175,8 @@ const CONTRACTOR_LANDING_STYLES = `
 }
 .cl-step-title { font-weight: 700; color: var(--cl-ink); margin-bottom: 4px; font-size: 15px; }
 .cl-step-body { font-size: 13.5px; color: var(--cl-ink-soft); line-height: 1.55; margin: 0; }
+.cl-step-body + .cl-step-body { margin-top: 6px; }
+.cl-step-note { font-style: italic; }
 .cl-cta-bottom { display: block; width: fit-content; margin: 36px auto 0; }
 @media (max-width: 760px) {
   .cl-steps { grid-template-columns: 1fr; gap: 24px; }

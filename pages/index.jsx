@@ -111,6 +111,7 @@ function LandingHero({ contractorCount }) {
             <div>
               <div className="hl-step-title">Confirm when the work is done</div>
               <p className="hl-step-body">You &mdash; not the contractor &mdash; confirm the job is complete. That's what triggers their fee, so there's no incentive to rush or cut corners.</p>
+              <p className="hl-step-body hl-step-note">You pay your contractor directly, the way you normally would &mdash; Harry's List never touches that payment.</p>
             </div>
           </div>
         </div>
@@ -199,6 +200,8 @@ const LANDING_STYLES = `
 }
 .hl-step-title { font-weight: 700; color: var(--hl-ink); margin-bottom: 4px; font-size: 15px; }
 .hl-step-body { font-size: 13.5px; color: var(--hl-ink-soft); line-height: 1.55; margin: 0; }
+.hl-step-body + .hl-step-body { margin-top: 6px; }
+.hl-step-note { font-style: italic; }
 @media (max-width: 760px) {
   .hl-steps { grid-template-columns: 1fr; gap: 24px; }
   .hl-hero { padding: 48px 20px 40px; }
