@@ -253,7 +253,7 @@ function ContractorCard({ contractor, selected, onToggleSelect, onViewProfile, i
       <div className="ph-card-top">
         <div className="ph-card-id">
           {contractor.logoUrl ? (
-            <img className="ph-avatar ph-avatar-img" src={contractor.logoUrl} alt={`${contractor.businessName} logo`} />
+            <img className="ph-avatar ph-avatar-img" src={contractor.logoUrl} alt={`${contractor.businessName} logo`} style={{ background: "#fff" }} />
           ) : (
             <div className="ph-avatar">{initials(contractor.businessName)}</div>
           )}
@@ -369,7 +369,7 @@ function ContractorProfileModal({ contractor, onClose, currentHomeowner, onToggl
         {/* Header */}
         <div className="ph-modal-head">
           {contractor.logoUrl ? (
-            <img className="ph-avatar lg ph-avatar-img" src={contractor.logoUrl} alt={`${contractor.businessName} logo`} />
+            <img className="ph-avatar lg ph-avatar-img" src={contractor.logoUrl} alt={`${contractor.businessName} logo`} style={{ background: "#fff" }} />
           ) : (
             <div className="ph-avatar lg">{initials(contractor.businessName)}</div>
           )}
@@ -2153,14 +2153,31 @@ function ContractorOnboarding({ onCreate, onEdit, editingContractor }) {
       setSubmitError("Logo must be under 5MB.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      // Draw onto white canvas so dark/transparent logos look clean on any background
+      const size = 200;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      // White background
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, size, size);
+      // Draw logo centered with padding
+      const pad = 12;
+      const scale = Math.min((size - pad * 2) / img.width, (size - pad * 2) / img.height);
+      const w = img.width * scale;
+      const h = img.height * scale;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      const dataUrl = canvas.toDataURL("image/png");
       const base64 = dataUrl.split(",")[1];
-      setLogoFile({ base64, fileName: file.name, contentType: file.type, previewUrl: dataUrl });
+      setLogoFile({ base64, fileName: file.name.replace(/\.[^.]+$/, ".png"), contentType: "image/png", previewUrl: dataUrl });
       setSubmitError(null);
     };
-    reader.readAsDataURL(file);
+    img.src = url;
   };
 
   const handleSubmit = async () => {
@@ -4510,7 +4527,7 @@ const CUSTOMER_STYLES = `
   font-size: 12.5px; color: var(--ph-red-text); line-height: 1.5; font-weight: 500; margin: 4px 0;
 }
 
-.ph-avatar-img { object-fit: cover; }
+.ph-avatar-img { object-fit: contain; background: #fff; padding: 2px; }
 .ph-logo-preview { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
 .ph-logo-preview img { width: 52px; height: 52px; border-radius: var(--ph-radius-sm); object-fit: cover; border: 1px solid var(--ph-sand-line); }
 
