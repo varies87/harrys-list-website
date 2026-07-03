@@ -1510,19 +1510,100 @@ function ReviewPromptModal({ contractorName, onSubmit, onSkip }) {
 
 // ---------------------------------------------------------------------------
 // ReviewGateModal -- shown when a homeowner tries to send a new quote request
-// but has unreviewed completed jobs.
+// but has unreviewed completed jobs. Shows inline review forms so they can
+// review and then immediately proceed to send their request.
 // ---------------------------------------------------------------------------
-function ReviewGateModal({ onClose }) {
+function ReviewGateModal({ onClose, unreviewedJobs, onReviewSubmitted }) {
+  const [ratings, setRatings] = useState({});
+  const [texts, setTexts] = useState({});
+  const [hoverRatings, setHoverRatings] = useState({});
+  const [submitting, setSubmitting] = useState({});
+  const [submitted, setSubmitted] = useState(new Set());
+
+  const allReviewed = unreviewedJobs.length > 0 && unreviewedJobs.every((j) => submitted.has(j.jobId));
+
+  const handleSubmitReview = async (job) => {
+    const rating = ratings[job.jobId];
+    if (!rating) return;
+    setSubmitting((prev) => ({ ...prev, [job.jobId]: true }));
+    try {
+      await onReviewSubmitted(job, { rating, text: (texts[job.jobId] || "").trim() });
+      setSubmitted((prev) => new Set([...prev, job.jobId]));
+    } catch (err) {
+      // ignore — review form will stay open
+    } finally {
+      setSubmitting((prev) => ({ ...prev, [job.jobId]: false }));
+    }
+  };
+
   return (
     <Modal onClose={onClose}>
-      <div className="ph-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="ph-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
         <button type="button" className="ph-modal-close" onClick={onClose} aria-label="Close">×</button>
-        <h2>Leave a review first</h2>
-        <p className="ph-muted">You have completed jobs that haven't been reviewed yet. Please leave a review for your recent work before sending new quote requests.</p>
-        <p className="ph-muted" style={{ marginTop: 8 }}>Scroll down to your quote requests to find the "Leave a review" button.</p>
-        <button type="button" className="ph-btn-primary" style={{ marginTop: 20 }} onClick={onClose}>
-          Got it
-        </button>
+        <h2>Leave a review to continue</h2>
+        <p className="ph-muted" style={{ marginBottom: 20 }}>
+          You have {unreviewedJobs.length} completed job{unreviewedJobs.length > 1 ? "s" : ""} waiting for a review. Leave your review{unreviewedJobs.length > 1 ? "s" : ""} below and your quote request will go out right after.
+        </p>
+
+        {unreviewedJobs.map((job) => (
+          <div key={job.jobId} style={{
+            background: submitted.has(job.jobId) ? "var(--ph-green-tint)" : "var(--ph-bg)",
+            border: `1px solid ${submitted.has(job.jobId) ? "#c7e0c2" : "var(--ph-sand-line)"}`,
+            borderRadius: 10, padding: 16, marginBottom: 14,
+          }}>
+            <div style={{ fontWeight: 700, color: "var(--ph-ink)", marginBottom: 2 }}>{job.contractorName}</div>
+            <div className="ph-muted small" style={{ marginBottom: 10 }}>{job.description}</div>
+
+            {submitted.has(job.jobId) ? (
+              <div style={{ color: "var(--ph-green-text)", fontWeight: 600, fontSize: 13 }}>✓ Review submitted</div>
+            ) : (
+              <>
+                {/* Stars */}
+                <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
+                  {[1,2,3,4,5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className={`ph-review-star-btn ${n <= ((hoverRatings[job.jobId] || 0) || (ratings[job.jobId] || 0)) ? "is-filled" : ""}`}
+                      onMouseEnter={() => setHoverRatings((p) => ({ ...p, [job.jobId]: n }))}
+                      onMouseLeave={() => setHoverRatings((p) => ({ ...p, [job.jobId]: 0 }))}
+                      onClick={() => setRatings((p) => ({ ...p, [job.jobId]: n }))}
+                    >★</button>
+                  ))}
+                </div>
+                {ratings[job.jobId] > 0 && (
+                  <textarea
+                    rows={2}
+                    value={texts[job.jobId] || ""}
+                    onChange={(e) => setTexts((p) => ({ ...p, [job.jobId]: e.target.value }))}
+                    placeholder="What did they do well? (optional)"
+                    style={{ width: "100%", fontSize: 13, marginBottom: 8, padding: "8px 10px", border: "1.5px solid var(--ph-sand)", borderRadius: 6, fontFamily: "inherit", resize: "vertical" }}
+                  />
+                )}
+                <button
+                  type="button"
+                  className="ph-btn-primary"
+                  style={{ fontSize: 12, padding: "6px 14px" }}
+                  disabled={!ratings[job.jobId] || submitting[job.jobId]}
+                  onClick={() => handleSubmitReview(job)}
+                >
+                  {submitting[job.jobId] ? "Submitting…" : "Submit review"}
+                </button>
+              </>
+            )}
+          </div>
+        ))}
+
+        {allReviewed && (
+          <button
+            type="button"
+            className="ph-btn-primary"
+            style={{ width: "100%", marginTop: 8 }}
+            onClick={onClose}
+          >
+            Continue to quote request →
+          </button>
+        )}
       </div>
     </Modal>
   );
@@ -1546,6 +1627,7 @@ function HomeownerView({
   const [reviewPrompt, setReviewPrompt] = useState(null); // { quoteRequestId, contractorId, contractorName }
   const [pendingReviewJobs, setPendingReviewJobs] = useState([]); // jobs needing review before new request
   const [showReviewGate, setShowReviewGate] = useState(false);
+  const [unreviewedJobsForGate, setUnreviewedJobsForGate] = useState([]);
   const [profileContractor, setProfileContractor] = useState(null);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [quoteTargetContractors, setQuoteTargetContractors] = useState([]);
@@ -1909,7 +1991,35 @@ function HomeownerView({
               })
             );
             const hasUnreviewed = hasUnreviewedMarked || hasUnreviewedConfirmed;
+
+            // Build the list of unreviewed jobs for the inline review modal
+            const unreviewedJobs = [];
+            myQuoteRequests.forEach((qr) => {
+              qr.recipients.forEach((r) => {
+                if (!r.homeownerMarkedComplete) return;
+                const c = contractors.find((con) => idsMatch(con.id, r.contractorId));
+                const job = c?.completedJobs?.find(
+                  (j) => idsMatch(j.homeownerId, currentHomeowner?.id) &&
+                    (j.status === "confirmed" || j.status === "paid")
+                );
+                if (!job) return;
+                const hasReview = c?.reviews?.some((rev) =>
+                  idsMatch(rev.homeownerId, currentHomeowner?.id) && idsMatch(rev.jobId, job.id)
+                );
+                if (!hasReview) {
+                  unreviewedJobs.push({
+                    jobId: job.id,
+                    contractorId: c.id,
+                    contractorName: c.businessName,
+                    description: qr.description,
+                    homeownerId: currentHomeowner.id,
+                  });
+                }
+              });
+            });
+
             if (hasUnreviewed) {
+              setUnreviewedJobsForGate(unreviewedJobs);
               setShowReviewGate(true);
             } else {
               setShowQuoteModal(true);
@@ -2159,7 +2269,32 @@ function HomeownerView({
           onSkip={() => setReviewPrompt(null)}
         />
       )}
-      {showReviewGate && <ReviewGateModal onClose={() => setShowReviewGate(false)} />}
+      {showReviewGate && (
+        <ReviewGateModal
+          onClose={() => {
+            setShowReviewGate(false);
+            setShowQuoteModal(true); // open quote modal after all reviews done
+          }}
+          unreviewedJobs={unreviewedJobsForGate}
+          onReviewSubmitted={async (job, review) => {
+            await apiCall("reviews", {
+              action: "create",
+              contractorId: job.contractorId,
+              homeownerId: job.homeownerId,
+              jobId: job.jobId,
+              rating: review.rating,
+              text: review.text,
+            });
+            // Update contractor reviews locally
+            setContractors((prev) => prev.map((c) =>
+              !idsMatch(c.id, job.contractorId) ? c : {
+                ...c,
+                reviews: [{ id: Date.now(), rating: review.rating, text: review.text, homeownerId: job.homeownerId, jobId: job.jobId, createdAt: new Date().toISOString() }, ...(c.reviews || [])]
+              }
+            ));
+          }}
+        />
+      )}
 
       <ContractorProfileModal
         contractor={profileContractor}
