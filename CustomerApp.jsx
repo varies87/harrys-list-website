@@ -6387,6 +6387,11 @@ export function ContractorApp() {
       }
       setCurrentContractor(normalizeContractor(final));
       setContractorScreen("dashboard");
+      // Meta Pixel: record a completed contractor signup as a conversion.
+      // Guarded so it's a no-op if the Pixel isn't loaded (e.g. no ID set).
+      if (typeof window !== "undefined" && typeof window.fbq === "function") {
+        window.fbq("track", "CompleteRegistration", { content_name: "contractor_signup" });
+      }
     } catch (err) { setLoadError(err.message); }
   };
 
