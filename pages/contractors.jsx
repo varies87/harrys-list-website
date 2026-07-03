@@ -1,9 +1,24 @@
 import dynamic from "next/dynamic";
 import Head from "next/head";
+import { useEffect } from "react";
+import { supabaseAuth } from "../shared";
 
 const ContractorApp = dynamic(() => import("../CustomerApp").then((mod) => mod.ContractorApp), { ssr: false });
 
 export default function ContractorsPage() {
+  // Same fix as the homepage: don't make an already signed-in contractor
+  // scroll past the pitch again on every visit.
+  useEffect(() => {
+    let cancelled = false;
+    supabaseAuth.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      if (data?.session) {
+        document.getElementById("portal")?.scrollIntoView({ behavior: "auto" });
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <>
       <Head>

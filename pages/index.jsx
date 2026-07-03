@@ -1,5 +1,7 @@
 import dynamic from "next/dynamic";
 import Head from "next/head";
+import { useEffect } from "react";
+import { supabaseAuth } from "../shared";
 
 const API_BASE_URL = "https://harrys-list-backend.vercel.app/api";
 
@@ -7,6 +9,21 @@ const API_BASE_URL = "https://harrys-list-backend.vercel.app/api";
 const CustomerApp = dynamic(() => import("../CustomerApp"), { ssr: false });
 
 export default function HomePage({ contractors }) {
+  // Signed-in visitors have already seen the pitch -- don't make them scroll
+  // past it again on every visit. Signed-out (first-time) visitors still see
+  // it. This only checks for a session token, so it resolves fast without
+  // waiting on a full profile fetch.
+  useEffect(() => {
+    let cancelled = false;
+    supabaseAuth.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      if (data?.session) {
+        document.getElementById("directory")?.scrollIntoView({ behavior: "auto" });
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <>
       <Head>
