@@ -1769,12 +1769,25 @@ function HomeownerView({
                     </div>
                   )}
                   <div className="ph-confirm-amount-row">
-                    <span className="ph-confirm-amount-label">Reported as completed</span>
+                    <span className="ph-confirm-amount-label">Invoice total</span>
                     <span className={`ph-confirm-amount-value ${isHigherThanQuoted ? "is-higher" : ""}`}>
                       ${job.reportedAmount.toLocaleString()}
                     </span>
                   </div>
                 </div>
+
+                {job.invoiceLineItems && job.invoiceLineItems.length > 0 && (
+                  <button
+                    type="button"
+                    className="ph-btn-secondary"
+                    style={{ fontSize: 12, padding: "5px 12px", alignSelf: "flex-start" }}
+                    onClick={() => {
+                      window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank");
+                    }}
+                  >
+                    View invoice →
+                  </button>
+                )}
 
                 {isHigherThanQuoted && (
                   <div className="ph-confirm-warning">
@@ -2382,6 +2395,8 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
   const [reportingFor, setReportingFor] = useState(null);
   const [amountInput, setAmountInput] = useState("");
   const [lowReportReason, setLowReportReason] = useState("");
+  const [invoiceLineItems, setInvoiceLineItems] = useState([]);
+  const [invoiceNote, setInvoiceNote] = useState("");
   const [composingFor, setComposingFor] = useState(null);
   const [quotePrice, setQuotePrice] = useState("");
   const [quoteMessage, setQuoteMessage] = useState("");
@@ -2434,18 +2449,40 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
 
   const startReporting = (qr) => {
     setReportingFor(qr.id);
-    setAmountInput(qr.budget ? qr.budget.replace(/[^0-9.]/g, "") : "");
     setLowReportReason("");
+    setInvoiceNote("");
+    // Pre-fill invoice from quote line items if they exist
+    const myRecipient = qr.recipients.find((r) => idsMatch(r.contractorId, contractor.id));
+    if (myRecipient?.quote?.lineItems && myRecipient.quote.lineItems.length > 0) {
+      setInvoiceLineItems(myRecipient.quote.lineItems.map((item) => ({ ...item })));
+    } else {
+      // Fall back to single line item pre-filled with quote price
+      const quotedPrice = myRecipient?.quote?.price;
+      setInvoiceLineItems([{ description: qr.description, qty: 1, unitPrice: quotedPrice ? String(quotedPrice) : "" }]);
+    }
   };
 
+  const invoiceTotal = invoiceLineItems.reduce((sum, item) => {
+    return sum + (parseFloat(item.qty) || 1) * (parseFloat(item.unitPrice) || 0);
+  }, 0);
+
+  const addInvoiceLineItem = () => setInvoiceLineItems((prev) => [...prev, { description: "", qty: 1, unitPrice: "" }]);
+  const removeInvoiceLineItem = (i) => setInvoiceLineItems((prev) => prev.filter((_, idx) => idx !== i));
+  const updateInvoiceLineItem = (i, field, value) => setInvoiceLineItems((prev) => prev.map((item, idx) => idx === i ? { ...item, [field]: value } : item));
+
   const submitReport = (qr) => {
-    const amount = parseFloat(amountInput);
+    const amount = invoiceTotal;
     if (!amount || amount <= 0) return;
-    if (checkIsLowReport(qr, contractor.id, amount) && !lowReportReason.trim()) return;
-    onReportJob(qr, amount, lowReportReason.trim() || undefined);
+    const myRecipient = qr.recipients.find((r) => idsMatch(r.contractorId, contractor.id));
+    const quotedPrice = myRecipient?.quote?.price;
+    const isLow = quotedPrice && amount < quotedPrice * 0.9;
+    if (isLow && !lowReportReason.trim()) return;
+    const validItems = invoiceLineItems.filter((l) => l.description.trim() && parseFloat(l.unitPrice) > 0);
+    onReportJob(qr, amount, lowReportReason.trim() || undefined, validItems.length > 0 ? validItems : null, invoiceNote.trim() || undefined);
     setReportingFor(null);
-    setAmountInput("");
+    setInvoiceLineItems([]);
     setLowReportReason("");
+    setInvoiceNote("");
   };
 
   const [lineItems, setLineItems] = useState([{ description: "", qty: 1, unitPrice: "" }]);
@@ -2700,41 +2737,65 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
             {myStatus === "responded" && !alreadyReported && (
               <div className="ph-inbox-actions">
                 {reportingFor === qr.id ? (
-                  <div className="ph-report-form">
-                    <div className="ph-report-row">
-                      <span className="ph-report-prefix">$</span>
-                      <input
-                        className="ph-report-input"
-                        value={amountInput}
-                        onChange={(e) => {
-                          setAmountInput(e.target.value);
-                          setLowReportReason("");
-                        }}
-                        placeholder="Final job total"
-                        inputMode="decimal"
-                      />
-                      <button
-                        className="ph-btn-primary"
-                        disabled={
-                          !amountInput ||
-                          parseFloat(amountInput) <= 0 ||
-                          (lowReport && !lowReportReason.trim())
-                        }
-                        onClick={() => submitReport(qr)}
-                      >
-                        Submit
-                      </button>
-                      <button
-                        className="ph-btn-secondary"
-                        onClick={() => {
-                          setReportingFor(null);
-                          setLowReportReason("");
-                        }}
-                      >
-                        Cancel
-                      </button>
+                  <div className="ph-invoice-builder">
+                    <div className="ph-invoice-builder-header">
+                      <span>Invoice</span>
+                      <span className="ph-muted small">Pre-filled from your quote — adjust if scope changed</span>
                     </div>
-                    {lowReport && (
+
+                    {/* Line items */}
+                    <div className="ph-line-items">
+                      <div className="ph-line-items-header">
+                        <span>Description</span>
+                        <span>Qty</span>
+                        <span>Unit price</span>
+                        <span>Total</span>
+                        <span></span>
+                      </div>
+                      {invoiceLineItems.map((item, i) => (
+                        <div className="ph-line-item-row" key={i}>
+                          <input
+                            className="ph-line-item-desc"
+                            value={item.description}
+                            onChange={(e) => updateInvoiceLineItem(i, "description", e.target.value)}
+                            placeholder="e.g. Labor"
+                          />
+                          <input
+                            className="ph-line-item-num"
+                            value={item.qty}
+                            onChange={(e) => updateInvoiceLineItem(i, "qty", e.target.value)}
+                            inputMode="decimal"
+                            placeholder="1"
+                          />
+                          <input
+                            className="ph-line-item-num"
+                            value={item.unitPrice}
+                            onChange={(e) => updateInvoiceLineItem(i, "unitPrice", e.target.value)}
+                            inputMode="decimal"
+                            placeholder="0.00"
+                          />
+                          <span className="ph-line-item-total">
+                            ${((parseFloat(item.qty) || 1) * (parseFloat(item.unitPrice) || 0)).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                          </span>
+                          <button
+                            type="button"
+                            className="ph-line-item-remove"
+                            onClick={() => removeInvoiceLineItem(i)}
+                            disabled={invoiceLineItems.length === 1}
+                          >×</button>
+                        </div>
+                      ))}
+                      <button type="button" className="ph-btn-secondary" style={{ fontSize: 12, padding: "5px 12px", marginTop: 8 }} onClick={addInvoiceLineItem}>
+                        + Add line item
+                      </button>
+                      <div className="ph-line-items-total">
+                        <span>Invoice total</span>
+                        <span>${invoiceTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+
+                    {/* Low report warning */}
+                    {quotedPrice && invoiceTotal > 0 && invoiceTotal < quotedPrice * 0.9 && (
                       <div className="ph-low-report-warning">
                         <span className="ph-low-report-label">
                           ⚠ This is more than 10% below your quoted price of ${quotedPrice?.toLocaleString() ?? "—"}. Please explain why.
@@ -2748,12 +2809,36 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
                         />
                       </div>
                     )}
+
+                    {/* Note */}
+                    <label className="ph-field" style={{ marginTop: 8 }}>
+                      <span>Note to homeowner (optional)</span>
+                      <textarea
+                        rows={2}
+                        value={invoiceNote}
+                        onChange={(e) => setInvoiceNote(e.target.value)}
+                        placeholder="e.g. Thank you for your business! Payment due within 30 days."
+                      />
+                    </label>
+
+                    <div className="ph-inbox-actions">
+                      <button
+                        className="ph-btn-primary"
+                        disabled={invoiceTotal <= 0 || (quotedPrice && invoiceTotal < quotedPrice * 0.9 && !lowReportReason.trim())}
+                        onClick={() => submitReport(qr)}
+                      >
+                        Send invoice & mark complete
+                      </button>
+                      <button className="ph-btn-secondary" onClick={() => setReportingFor(null)}>
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <>
                     <span className="ph-status-chip responded">responded</span>
                     <button className="ph-btn-secondary" onClick={() => startReporting(qr)}>
-                      Mark job complete
+                      Send invoice & mark complete
                     </button>
                   </>
                 )}
@@ -4584,6 +4669,17 @@ const CUSTOMER_STYLES = `
 .ph-fee-owed-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ph-taupe-soft); display: block; font-weight: 700; }
 .ph-fee-owed-amount { font-size: 20px; font-weight: 700; font-family: var(--ph-mono); color: var(--ph-ink); margin-right: 4px; }
 
+.ph-invoice-builder {
+  display: flex; flex-direction: column; gap: 12px; width: 100%;
+  background: var(--ph-bg); border: 1.5px solid var(--ph-sand-line);
+  border-radius: var(--ph-radius-sm); padding: 16px;
+}
+.ph-invoice-builder-header {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 14px; font-weight: 700; color: var(--ph-ink);
+  padding-bottom: 10px; border-bottom: 1px solid var(--ph-sand-line);
+}
+
 .ph-report-form { display: flex; flex-direction: column; gap: 10px; width: 100%; }
 
 .ph-report-row { display: flex; align-items: center; gap: 8px; }
@@ -5796,12 +5892,11 @@ export function ContractorApp() {
     } catch (err) { setLoadError(err.message); }
   };
 
-  const handleReportJob = async (qr, amount, lowReportReason) => {
+  const handleReportJob = async (qr, amount, lowReportReason, invoiceLineItems, invoiceNote) => {
     const contractorId = currentContractor?.id;
     if (!contractorId) return;
     try {
-      // contractorId and homeownerId now derived from session server-side.
-      const data = await apiCall("jobs", { action: "report", quoteRequestId: qr.id, description: qr.description, reportedAmount: amount, lowReportReason: lowReportReason || undefined });
+      const data = await apiCall("jobs", { action: "report", quoteRequestId: qr.id, description: qr.description, reportedAmount: amount, lowReportReason: lowReportReason || undefined, invoiceLineItems: invoiceLineItems || undefined, invoiceNote: invoiceNote || undefined });
       setCurrentContractor((prev) => !prev ? prev : { ...prev, completedJobs: [...(prev.completedJobs || []), data.job] });
       await apiCall("quotes", { action: "markJobReported", quoteRequestId: qr.id });
       setQuoteRequests((prev) => prev.map((q) => q.id !== qr.id ? q : { ...q, recipients: q.recipients.map((r) => idsMatch(r.contractorId, contractorId) ? { ...r, jobReported: true } : r) }));
