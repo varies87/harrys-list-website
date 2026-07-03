@@ -115,34 +115,6 @@ function LandingHero({ contractorCount }) {
           </div>
         </div>
       </section>
-
-      <section className="hl-section hl-section-alt">
-        <h2 className="hl-h2">For contractors</h2>
-        <div className="hl-steps">
-          <div className="hl-step">
-            <div className="hl-step-num">1</div>
-            <div>
-              <div className="hl-step-title">List your business for free</div>
-              <p className="hl-step-body">No monthly fee, no per-lead charge, no bidding against other contractors just to show up in search.</p>
-            </div>
-          </div>
-          <div className="hl-step">
-            <div className="hl-step-num">2</div>
-            <div>
-              <div className="hl-step-title">Only pay when you actually get paid</div>
-              <p className="hl-step-body">A small percentage fee applies only after a homeowner confirms a job is complete &mdash; never upfront, never for a lead that goes nowhere.</p>
-            </div>
-          </div>
-          <div className="hl-step">
-            <div className="hl-step-num">3</div>
-            <div>
-              <div className="hl-step-title">Build a real reputation</div>
-              <p className="hl-step-body">Reviews and thumbs-up from real, confirmed jobs &mdash; not anonymous ratings from people you never actually worked with.</p>
-            </div>
-          </div>
-        </div>
-        <a href="/contractors" className="hl-btn hl-btn-primary hl-contractor-cta">List your business free →</a>
-      </section>
     </div>
   );
 }
@@ -210,8 +182,6 @@ const LANDING_STYLES = `
 .hl-btn-secondary:hover { background: rgba(255,255,255,0.14); transform: translateY(-1px); }
 .hl-hero-note { margin-top: 20px; font-size: 13px; color: #B8C4BB; }
 .hl-section { max-width: 900px; margin: 0 auto; padding: 56px 24px; }
-.hl-section-alt { background: var(--hl-surface); max-width: 100%; border-top: 1px solid var(--hl-sand-line); border-bottom: 1px solid var(--hl-sand-line); }
-.hl-section-alt > * { max-width: 900px; margin-left: auto; margin-right: auto; }
 .hl-h2 {
   font-family: var(--hl-serif);
   font-size: 24px;
@@ -229,7 +199,6 @@ const LANDING_STYLES = `
 }
 .hl-step-title { font-weight: 700; color: var(--hl-ink); margin-bottom: 4px; font-size: 15px; }
 .hl-step-body { font-size: 13.5px; color: var(--hl-ink-soft); line-height: 1.55; margin: 0; }
-.hl-contractor-cta { display: block; width: fit-content; margin: 36px auto 0; }
 @media (max-width: 760px) {
   .hl-steps { grid-template-columns: 1fr; gap: 24px; }
   .hl-hero { padding: 48px 20px 40px; }
