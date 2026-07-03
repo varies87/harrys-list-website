@@ -5843,7 +5843,7 @@ export function ContractorPublicProfile() {
       <header className="ph-header">
         <div className="ph-header-brand">
           <div className="ph-header-titles">
-            <h1 className="ph-header-title">Harry's List</h1>
+            <p className="ph-header-title">Harry's List</p>
             <span className="ph-header-subtitle">DFW Trade Directory</span>
           </div>
         </div>
