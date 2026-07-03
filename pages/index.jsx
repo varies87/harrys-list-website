@@ -16,6 +16,14 @@ export default function HomePage({ contractors }) {
         <meta property="og:description" content="No pay-per-lead. Ever. Find trusted home service contractors in Dallas-Fort Worth." />
         <meta property="og:url" content="https://harryslistdfw.com" />
         <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Harry's List" />
+        <meta property="og:image" content="https://harryslistdfw.com/og-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Harry's List — DFW Trade Directory" />
+        <meta name="twitter:description" content="No pay-per-lead. Ever. Find trusted home service contractors in Dallas-Fort Worth." />
+        <meta name="twitter:image" content="https://harryslistdfw.com/og-image.png" />
         <link rel="canonical" href="https://harryslistdfw.com" />
       </Head>
 

@@ -46,18 +46,34 @@ const API_BASE_URL = "https://harrys-list-backend.vercel.app/api";
  * header on every call. Backend routes that need to know "who is really
  * making this request" verify this token server-side.
  */
-async function apiCall(resource, body) {
+async function apiCall(resource, body, { timeoutMs = 20000 } = {}) {
   const token = await getAuthToken();
   const headers = { "Content-Type": "application/json" };
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}/${resource}`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
+  // Abort the request if it hangs, so the UI never waits forever (L-8).
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}/${resource}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err && err.name === "AbortError") {
+      throw new Error(`Request to ${resource} timed out. Please try again.`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data.error || `Request to ${resource} failed.`);

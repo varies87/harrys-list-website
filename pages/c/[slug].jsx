@@ -3,6 +3,18 @@ import Head from "next/head";
 
 const API_BASE_URL = "https://harrys-list-backend.vercel.app/api";
 
+// Escapes JSON for safe embedding inside a <script> tag. Without this, a
+// contractor's business_name/bio/trade could break out of the JSON-LD block
+// and inject markup or script into every visitor's page (stored XSS, H-3).
+function safeJsonLdStringify(obj) {
+  return JSON.stringify(obj)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
 const ContractorPublicProfile = dynamic(
   () => import("../../CustomerApp").then((mod) => mod.ContractorPublicProfile),
   { ssr: false }
@@ -46,10 +58,16 @@ export default function ContractorProfilePage({ contractor }) {
         <meta property="og:description" content={`${contractor.trade} contractor in Dallas-Fort Worth. ${contractor.bio}`} />
         <meta property="og:url" content={profileUrl} />
         <meta property="og:type" content="profile" />
+        <meta property="og:site_name" content="Harry's List" />
+        <meta property="og:image" content="https://harryslistdfw.com/og-image.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${contractor.business_name} — Harry's List DFW`} />
+        <meta name="twitter:description" content={`${contractor.trade} contractor in Dallas-Fort Worth.`} />
+        <meta name="twitter:image" content="https://harryslistdfw.com/og-image.png" />
         <link rel="canonical" href={profileUrl} />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(jsonLd) }}
         />
       </Head>
 

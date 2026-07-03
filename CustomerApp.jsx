@@ -23,6 +23,18 @@ import {
   describeServiceArea,
 } from "./shared.js";
 
+// Lets non-button elements (image thumbnails that open a lightbox, etc.) be
+// activated with the keyboard for accessibility (M-9). Pair with role="button"
+// and tabIndex={0} so Enter/Space fire the same handler as a click.
+function activateOnKey(handler) {
+  return (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handler(e);
+    }
+  };
+}
+
 function ServiceAreaPicker({ selection, onChange }) {
   const [expandedRegions, setExpandedRegions] = useState(() => new Set(ZIP_DATA.regions.map((r) => r.region)));
 
@@ -430,7 +442,11 @@ function ContractorProfileModal({ contractor, onClose, currentHomeowner, onToggl
                   className="ph-portfolio-thumb"
                   title={photo.caption || ""}
                   loading="lazy"
-                  onClick={() => window.open(photo.publicUrl, "_blank")}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open portfolio photo${photo.caption ? `: ${photo.caption}` : ""} in a new tab`}
+                  onClick={() => window.open(photo.publicUrl, "_blank", "noopener,noreferrer")}
+                  onKeyDown={activateOnKey(() => window.open(photo.publicUrl, "_blank", "noopener,noreferrer"))}
                 />
               ))}
             </div>
@@ -726,7 +742,7 @@ export function ResetPassword() {
       <header className="ph-header">
         <div className="ph-header-brand">
           <div className="ph-header-titles">
-            <span className="ph-header-title">Harry's List</span>
+            <h1 className="ph-header-title">Harry's List</h1>
             <span className="ph-header-subtitle">DFW Trade Directory</span>
           </div>
         </div>
@@ -1901,7 +1917,7 @@ function HomeownerView({
                     className="ph-btn-secondary"
                     style={{ fontSize: 12, padding: "5px 12px", alignSelf: "flex-start" }}
                     onClick={() => {
-                      window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank");
+                      window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
                     }}
                   >
                     View invoice →
@@ -2181,7 +2197,7 @@ function HomeownerView({
                                   style={{ fontSize: 11, padding: "4px 10px" }}
                                   onClick={() => {
                                     const contractor = contractors.find((con) => idsMatch(con.id, r.contractorId));
-                                    window.open(`/quote-preview?contractor=${encodeURIComponent(contractor?.businessName || "Contractor")}&description=${encodeURIComponent(qr.description)}&items=${encodeURIComponent(JSON.stringify(r.quote.lineItems))}&total=${r.quote.price}&message=${encodeURIComponent(r.quote.message || "")}`, "_blank");
+                                    window.open(`/quote-preview?contractor=${encodeURIComponent(contractor?.businessName || "Contractor")}&description=${encodeURIComponent(qr.description)}&items=${encodeURIComponent(JSON.stringify(r.quote.lineItems))}&total=${r.quote.price}&message=${encodeURIComponent(r.quote.message || "")}`, "_blank", "noopener,noreferrer");
                                   }}
                                 >
                                   View itemized quote →
@@ -2567,7 +2583,16 @@ function QuotePhotos({ quoteRequestId }) {
       <div className="ph-muted small" style={{ marginBottom: 6, fontWeight: 600 }}>Photos from homeowner</div>
       <div className="ph-quote-photo-grid">
         {photos.map((photo) => (
-          <div className="ph-quote-photo-item" key={photo.id} onClick={() => setLightbox(photo.publicUrl)} style={{ cursor: "zoom-in" }}>
+          <div
+            className="ph-quote-photo-item"
+            key={photo.id}
+            role="button"
+            tabIndex={0}
+            aria-label="View job photo full size"
+            onClick={() => setLightbox(photo.publicUrl)}
+            onKeyDown={activateOnKey(() => setLightbox(photo.publicUrl))}
+            style={{ cursor: "zoom-in" }}
+          >
             <img src={photo.thumbnailUrl} alt="Job photo" className="ph-quote-photo-img" loading="lazy" />
           </div>
         ))}
@@ -3112,17 +3137,11 @@ function StripeCheckoutModal({ job, contractor, onClose, onSuccess }) {
         const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
         stripeRef.current = stripe;
 
-        const response = await fetch(CREATE_PAYMENT_INTENT_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ jobId: job.id, contractorId: contractor.id }),
-        });
-        const data = await response.json();
+        // Uses apiCall so the Supabase session token is attached (M-8): the
+        // backend verifies the caller and that this job is theirs. contractorId
+        // is resolved server-side from the session, so we no longer send it.
+        const data = await apiCall("create-payment-intent", { jobId: job.id });
         if (cancelled) return;
-
-        if (!response.ok) {
-          throw new Error(data.error || "Could not start payment.");
-        }
 
         const elements = stripe.elements({ clientSecret: data.clientSecret });
         elementsRef.current = elements;
@@ -3709,7 +3728,7 @@ export default function CustomerApp() {
       <header className="ph-header">
         <div className="ph-header-brand">
           <div className="ph-header-titles">
-            <span className="ph-header-title">Harry's List</span>
+            <h1 className="ph-header-title">Harry's List</h1>
             <span className="ph-header-subtitle">DFW Trade Directory</span>
           </div>
         </div>
@@ -3989,7 +4008,11 @@ function ContractorPortfolio({ contractor }) {
               alt={photo.caption || "Portfolio photo"}
               className="cd-portfolio-img"
               loading="lazy"
+              role="button"
+              tabIndex={0}
+              aria-label={`View portfolio photo${photo.caption ? `: ${photo.caption}` : ""} full size`}
               onClick={() => setLightboxUrl(photo.publicUrl)}
+              onKeyDown={activateOnKey(() => setLightboxUrl(photo.publicUrl))}
             />
             <div className="cd-portfolio-overlay">
               {captionFor === photo.id ? (
@@ -4397,6 +4420,7 @@ const CUSTOMER_STYLES = `
   font-weight: 600;
   letter-spacing: 0.01em;
   color: #FDFBF6;
+  margin: 0;
 }
 .ph-header-subtitle {
   font-size: 10.5px;
@@ -5889,7 +5913,11 @@ export function ContractorPublicProfile() {
                       className="pp-photo"
                       loading="lazy"
                       title={photo.caption || ""}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`View portfolio photo${photo.caption ? `: ${photo.caption}` : ""} full size`}
                       onClick={() => setLightbox(photo.publicUrl)}
+                      onKeyDown={activateOnKey(() => setLightbox(photo.publicUrl))}
                     />
                   ))}
                 </div>
