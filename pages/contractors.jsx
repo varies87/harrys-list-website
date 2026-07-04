@@ -1,7 +1,7 @@
 import dynamic from "next/dynamic";
 import Head from "next/head";
-import { useEffect } from "react";
-import { supabaseAuth } from "../shared";
+import { useEffect, useState } from "react";
+import { supabaseAuth, apiCall } from "../shared";
 
 const ContractorApp = dynamic(() => import("../CustomerApp").then((mod) => mod.ContractorApp), { ssr: false });
 
@@ -53,6 +53,25 @@ export default function ContractorsPage() {
  * volume that can't yet be guaranteed.
  */
 function ContractorHero() {
+  // Founding-offer gate. We read the live remaining-spots count only to decide
+  // whether the founding offer is still open -- we never display the number,
+  // because "47 left" reveals how few contractors are on yet and reads as
+  // plenty, killing the urgency. When spots run out (or the count can't load)
+  // this stays false and the hero renders exactly as the standard fee-led
+  // landing page -- so at 50 contractors it reverts automatically, no redeploy.
+  const [foundingActive, setFoundingActive] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    apiCall("contractors", { action: "foundingStatus" })
+      .then((res) => {
+        if (!cancelled) setFoundingActive(typeof res?.spotsLeft === "number" && res.spotsLeft > 0);
+      })
+      .catch(() => {
+        if (!cancelled) setFoundingActive(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   const scrollToPortal = (e) => {
     e.preventDefault();
     document.getElementById("portal")?.scrollIntoView({ behavior: "smooth" });
@@ -92,6 +111,14 @@ function ContractorHero() {
 
       <section className="cl-hero">
         <div className="cl-hero-inner">
+          {foundingActive && (
+            <div className="cl-founding-strip">
+              <span className="cl-founding-strip-badge">★ First Fifty</span>
+              <span className="cl-founding-strip-text">
+                Founding offer: your first completed job's platform fee is on us. First 50 DFW contractors only.
+              </span>
+            </div>
+          )}
           <span className="cl-eyebrow">For DFW contractors</span>
           <h1 className="cl-h1">Keep 96 to 99% of every job.</h1>
           <p className="cl-sub">
@@ -99,7 +126,7 @@ function ContractorHero() {
             only after a homeowner confirms the job is done.
           </p>
           <a href="#portal" className="cl-btn cl-btn-primary cl-btn-lg" onClick={scrollToPortal}>
-            List your business free →
+            {foundingActive ? "Claim your founding spot →" : "List your business free →"}
           </a>
         </div>
       </section>
@@ -190,6 +217,19 @@ const CONTRACTOR_LANDING_STYLES = `
 .cl-eyebrow {
   display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--cl-gold); margin-bottom: 16px;
+}
+.cl-founding-strip {
+  display: flex; gap: 11px; align-items: center; justify-content: center; flex-wrap: wrap;
+  background: linear-gradient(135deg, #E8A33D 0%, #C8872A 100%);
+  border-radius: 12px; padding: 12px 18px; margin: 0 auto 24px; max-width: 560px;
+  box-shadow: 0 3px 14px rgba(232,163,61,0.25);
+}
+.cl-founding-strip-badge {
+  background: rgba(28,43,34,0.85); color: #FBE9C6; font-weight: 700; font-size: 11px;
+  letter-spacing: 0.04em; white-space: nowrap; padding: 5px 11px; border-radius: 999px;
+}
+.cl-founding-strip-text {
+  font-size: 14px; font-weight: 600; line-height: 1.4; color: #241704; text-align: left;
 }
 .cl-h1 {
   font-family: var(--cl-serif); font-size: clamp(30px, 5vw, 42px); line-height: 1.12;

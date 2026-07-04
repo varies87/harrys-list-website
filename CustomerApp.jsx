@@ -1063,7 +1063,9 @@ function HomeownerAuth({ onSignedUp, onSignedIn }) {
  * already exists for this account.
  */
 function ContractorAuth({ onSignedUp, onSignedIn }) {
-  const [mode, setMode] = useState("signin");
+  // Default to "signup": this view is landed on straight from contractor ads,
+  // so the visitor almost never has an account yet. Sign-in stays one tap away.
+  const [mode, setMode] = useState("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -1165,9 +1167,8 @@ function ContractorAuth({ onSignedUp, onSignedIn }) {
           <div className="ph-founding-offer-body">
             <strong>Your first job's platform fee is on us.</strong>
             <span>
-              The first 50 contractors on Harry's List pay zero platform fee on their first
-              completed job, plus a permanent Founding Member badge.{" "}
-              {foundingSpots} of 50 spot{foundingSpots === 1 ? "" : "s"} left.
+              You're one of the first 50 contractors on Harry's List — your first completed
+              job's platform fee is waived, plus a permanent Founding Member badge.
             </span>
           </div>
         </div>
