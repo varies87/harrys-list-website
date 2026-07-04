@@ -86,6 +86,10 @@ function LandingHero({ contractorCount }) {
 
       <section className="hl-hero">
         <div className="hl-hero-inner">
+          <div className="hl-wordmark">
+            <span className="hl-wordmark-name">Harry&rsquo;s List</span>
+            <span className="hl-wordmark-tag">DFW Trade Directory</span>
+          </div>
           <span className="hl-eyebrow">Dallas &ndash; Fort Worth</span>
           <h1 className="hl-h1">The DFW trade directory built around a simple idea: no pay-per-lead, ever.</h1>
           <p className="hl-sub">
@@ -168,6 +172,27 @@ const LANDING_STYLES = `
   text-transform: uppercase;
   color: #E8A33D;
   margin-bottom: 14px;
+}
+.hl-wordmark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 22px;
+}
+.hl-wordmark-name {
+  font-family: var(--hl-serif, "Iowan Old Style", "Palatino Linotype", Georgia, serif);
+  font-size: 30px;
+  font-weight: 600;
+  color: #FDFBF6;
+  line-height: 1;
+}
+.hl-wordmark-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #E8A33D;
+  margin-top: 7px;
 }
 .hl-h1 {
   font-family: var(--hl-serif);
