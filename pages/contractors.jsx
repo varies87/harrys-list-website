@@ -6,15 +6,17 @@ import { supabaseAuth, apiCall } from "../shared";
 const ContractorApp = dynamic(() => import("../CustomerApp").then((mod) => mod.ContractorApp), { ssr: false });
 
 export default function ContractorsPage() {
-  // Same fix as the homepage: don't make an already signed-in contractor
-  // scroll past the pitch again on every visit.
+  // A signed-in contractor should land on their dashboard, not scroll past the
+  // acquisition pitch they've already converted on. We render the hero by
+  // default (starting false keeps it in the SSR HTML for SEO and shows it
+  // instantly for logged-out ad traffic), then unmount it once an existing
+  // session is detected -- the app below then fills the screen with the
+  // dashboard. No scroll hack, no pitch flashing above a logged-in user.
+  const [signedIn, setSignedIn] = useState(false);
   useEffect(() => {
     let cancelled = false;
     supabaseAuth.auth.getSession().then(({ data }) => {
-      if (cancelled) return;
-      if (data?.session) {
-        document.getElementById("portal")?.scrollIntoView({ behavior: "auto" });
-      }
+      if (!cancelled) setSignedIn(!!data?.session);
     });
     return () => { cancelled = true; };
   }, []);
@@ -33,7 +35,7 @@ export default function ContractorsPage() {
             bare login form. */}
       </Head>
 
-      <ContractorHero />
+      {!signedIn && <ContractorHero />}
 
       <div id="portal">
         <ContractorApp />
