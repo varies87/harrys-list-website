@@ -400,6 +400,9 @@ function ContractorProfileModal({ contractor, onClose, currentHomeowner, onToggl
           <div>
             <h2>{contractor.businessName}</h2>
             <div className="ph-card-trade">{contractor.trade}</div>
+            {contractor.isFoundingMember && (
+              <div className="ph-founder-badge">★ First Fifty · Founder</div>
+            )}
           </div>
         </div>
 
@@ -4954,6 +4957,18 @@ const CUSTOMER_STYLES = `
   transition: text-decoration-color 0.15s ease;
 }
 .ph-card-name:hover { text-decoration-color: var(--ph-clay); }
+.ph-founder-badge {
+  display: inline-block;
+  margin-top: 6px;
+  background: linear-gradient(135deg, #F3E4C4 0%, #E8CF9E 100%);
+  color: #7A5A1E;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid #DECB87;
+}
 .ph-card-trade {
   font-size: 11.5px; color: var(--ph-clay); margin-top: 3px; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.04em;
