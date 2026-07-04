@@ -3279,6 +3279,14 @@ function StripeCheckoutModal({ job, contractor, onClose, onSuccess }) {
         const data = await apiCall("create-payment-intent", { jobId: job.id });
         if (cancelled) return;
 
+        // Founding-member perk: the backend already settled this job as paid
+        // with a $0 fee, so there's no Stripe payment to collect. Show the
+        // waived state instead of mounting a payment form.
+        if (data.feeWaived) {
+          setStage("waived");
+          return;
+        }
+
         const elements = stripe.elements({ clientSecret: data.clientSecret });
         elementsRef.current = elements;
         const paymentElement = elements.create("payment");
@@ -3344,6 +3352,15 @@ function StripeCheckoutModal({ job, contractor, onClose, onSuccess }) {
         )}
 
         {stage === "loading" && <p className="ph-muted">Loading secure payment form…</p>}
+
+        {stage === "waived" && (
+          <div className="ph-fee-waived">
+            <strong>★ Founding member — fee waived.</strong>
+            <p className="ph-muted small" style={{ marginTop: 4 }}>
+              This job's platform fee is on the house. Nothing to pay — you're all set.
+            </p>
+          </div>
+        )}
 
         {stage === "error" && (
           <div className="ph-stripe-error">
@@ -4267,6 +4284,20 @@ function ContractorDashboard({ contractor, quoteRequests, onNavigate }) {
           <button className="cd-btn cd-btn-secondary" onClick={() => onNavigate("onboard")}>Edit profile</button>
         </div>
       </div>
+
+      {contractor.isFoundingMember && (
+        <div className="cd-founding-banner">
+          <span className="cd-founding-badge">★ Founding Member</span>
+          <span className="cd-founding-text">
+            {(() => {
+              const remaining = Math.max(0, 3 - (contractor.foundingFreeJobsUsed || 0));
+              return remaining > 0
+                ? `Zero platform fees on your next ${remaining} completed job${remaining === 1 ? "" : "s"}.`
+                : "Thanks for being one of our founding contractors.";
+            })()}
+          </span>
+        </div>
+      )}
 
       {/* Stat cards */}
       <div className="cd-stat-grid">
@@ -5631,6 +5662,17 @@ const CUSTOMER_STYLES = `
 .cd-btn-secondary:hover { background: #E4DAD0; }
 
 /* Stat cards */
+.cd-founding-banner {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  background: linear-gradient(135deg, #23361f 0%, #1C2B22 100%);
+  border: 1px solid #E8A33D; border-radius: 12px; padding: 14px 18px; margin-bottom: 18px;
+}
+.cd-founding-badge {
+  background: #E8A33D; color: #1C2B22; font-weight: 700; font-size: 12.5px;
+  padding: 4px 12px; border-radius: 999px; white-space: nowrap;
+}
+.cd-founding-text { color: #F0E4CE; font-size: 13.5px; }
+.ph-fee-waived { background: #E3EEDF; border: 1px solid #c7e0c2; border-radius: 8px; padding: 14px 16px; color: #2C6B3F; }
 .cd-stat-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
