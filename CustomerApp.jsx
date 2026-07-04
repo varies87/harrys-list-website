@@ -1069,6 +1069,24 @@ function ContractorAuth({ onSignedUp, onSignedIn }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
+  // "Founding 50" acquisition offer. Reads the live remaining-spots count from
+  // the backend and only shows while spots remain -- when the 50th founder is
+  // approved this returns 0 and the banner disappears on its own, no redeploy.
+  // On any fetch failure we leave it null, so the banner simply doesn't show
+  // rather than displaying a broken or misleading offer.
+  const [foundingSpots, setFoundingSpots] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    apiCall("contractors", { action: "foundingStatus" })
+      .then((res) => {
+        if (!cancelled) setFoundingSpots(typeof res?.spotsLeft === "number" ? res.spotsLeft : null);
+      })
+      .catch(() => {
+        if (!cancelled) setFoundingSpots(null);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   const canSubmitSignUp = email.trim().includes("@") && password.length >= 8;
   const canSubmitSignIn = email.trim().includes("@") && password.length > 0;
 
@@ -1141,6 +1159,19 @@ function ContractorAuth({ onSignedUp, onSignedIn }) {
 
   return (
     <div className="ph-auth-card">
+      {foundingSpots > 0 && (
+        <div className="ph-founding-offer">
+          <span className="ph-founding-offer-badge">★ First Fifty</span>
+          <div className="ph-founding-offer-body">
+            <strong>Your first job's platform fee is on us.</strong>
+            <span>
+              The first 50 contractors on Harry's List pay zero platform fee on their first
+              completed job, plus a permanent Founding Member badge.{" "}
+              {foundingSpots} of 50 spot{foundingSpots === 1 ? "" : "s"} left.
+            </span>
+          </div>
+        </div>
+      )}
       <div className="ph-auth-mode-switch">
         <button type="button" className={mode === "signin" ? "is-active" : ""} onClick={() => { setMode("signin"); setError(null); }}>
           Sign in
@@ -4293,7 +4324,7 @@ function ContractorDashboard({ contractor, quoteRequests, onNavigate }) {
           <span className="cd-founding-badge">★ Founding Member</span>
           <span className="cd-founding-text">
             {(() => {
-              const remaining = Math.max(0, 3 - (contractor.foundingFreeJobsUsed || 0));
+              const remaining = Math.max(0, 1 - (contractor.foundingFreeJobsUsed || 0));
               return remaining > 0
                 ? `Zero platform fees on your next ${remaining} completed job${remaining === 1 ? "" : "s"}.`
                 : "Thanks for being one of our founding contractors.";
@@ -5280,6 +5311,20 @@ const CUSTOMER_STYLES = `
 .ph-favorite-btn:hover { color: var(--ph-gold); }
 .ph-favorite-btn.is-favorite { color: var(--ph-gold); }
 
+.ph-founding-offer {
+  display: flex; gap: 13px; align-items: flex-start;
+  background: linear-gradient(135deg, #FBF3E2 0%, #F4E6C9 100%);
+  border: 1px solid #E8CF9E; border-radius: var(--ph-radius-lg);
+  padding: 15px 17px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(122,90,30,0.10);
+}
+.ph-founding-offer-badge {
+  background: linear-gradient(135deg, #E8A33D 0%, #C8872A 100%); color: #3A2A0E;
+  font-weight: 700; font-size: 11px; letter-spacing: 0.04em; white-space: nowrap;
+  padding: 5px 11px; border-radius: 999px; margin-top: 1px;
+}
+.ph-founding-offer-body { display: flex; flex-direction: column; gap: 3px; }
+.ph-founding-offer-body strong { font-size: 14.5px; color: #6B4E14; font-family: var(--ph-serif); font-weight: 700; }
+.ph-founding-offer-body span { font-size: 12.5px; color: #7A5A1E; line-height: 1.5; }
 .ph-auth-card {
   background: var(--ph-surface); border: 1px solid var(--ph-sand-line); border-radius: var(--ph-radius-lg); padding: 32px; max-width: 460px;
   box-shadow: var(--ph-shadow-md); margin: 48px auto 0; min-height: 420px;
