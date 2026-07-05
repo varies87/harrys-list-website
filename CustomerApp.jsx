@@ -332,6 +332,21 @@ function ContractorCard({ contractor, selected, onToggleSelect, onViewProfile, i
           <span className="ph-thumb up">▲ {contractor.thumbsUp}</span>
         </div>
       </div>
+
+      {(() => {
+        // Surface the most recent written review right on the card. The words
+        // are the persuasive part -- a "5.0" number alone doesn't convince a
+        // homeowner the way a real quote from a verified customer does.
+        const latestWithText = (contractor.reviews || []).find((r) => r.text && r.text.trim());
+        if (!latestWithText) return null;
+        const snippet =
+          latestWithText.text.length > 110
+            ? latestWithText.text.slice(0, 110).replace(/\s\S*$/, "") + "…"
+            : latestWithText.text;
+        return (
+          <p className="ph-card-review">“{snippet}” <span className="ph-card-review-tag">— verified customer</span></p>
+        );
+      })()}
     </div>
   );
 }
@@ -5115,6 +5130,11 @@ const CUSTOMER_STYLES = `
 .ph-divider { border-top: 1px solid var(--ph-sand-line); margin: 18px 0; }
 .ph-review { padding: 12px 0; border-bottom: 1px solid var(--ph-sand-line); }
 .ph-review p { margin: 5px 0; font-size: 13.5px; }
+.ph-card-review {
+  margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--ph-sand-line);
+  font-size: 13px; font-style: italic; color: var(--ph-ink-soft); line-height: 1.5;
+}
+.ph-card-review-tag { font-style: normal; font-size: 11.5px; color: var(--ph-taupe-soft); white-space: nowrap; }
 .ph-review-author { font-size: 12px; color: var(--ph-taupe-soft); }
 .ph-muted { color: var(--ph-taupe-soft); }
 .ph-muted.small { font-size: 12px; }
@@ -6568,7 +6588,21 @@ export function ContractorApp() {
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#C1622A" }}>Contractor Portal</div>
           </div>
           <ContractorAuthGate onSignedUp={handleContractorSignedUp} onSignedIn={handleContractorSignedIn} onCreate={handleCreateContractor} />
-          <a href="/" style={{ marginTop: 24, fontSize: 12, color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>← Back to homeowner directory</a>
+          <a
+            href="/"
+            style={{
+              marginTop: 24,
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#FDFBF6",
+              textDecoration: "none",
+              border: "1px solid rgba(255,255,255,0.35)",
+              borderRadius: 8,
+              padding: "9px 18px",
+            }}
+          >
+            ← Not a contractor? Back to the homeowner directory
+          </a>
         </div>
       )}
       {!checkingSession && currentContractor && (
