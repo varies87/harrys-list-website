@@ -5285,7 +5285,7 @@ const CUSTOMER_STYLES = `
 .ph-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; font-size: 13px; font-weight: 700; color: var(--ph-ink-soft); }
 .ph-field.inline { margin-bottom: 0; flex-direction: row; align-items: center; gap: 10px; }
 .ph-field input, .ph-field textarea, .ph-field select {
-  font-family: var(--ph-sans); font-weight: 400; font-size: 14px; padding: 11px 13px; border: 1.5px solid var(--ph-sand);
+  font-family: var(--ph-sans); font-weight: 400; font-size: 16px; padding: 11px 13px; border: 1.5px solid var(--ph-sand);
   border-radius: var(--ph-radius-sm); background: var(--ph-surface); color: var(--ph-ink); transition: border-color 0.15s ease;
 }
 .ph-field input:focus, .ph-field textarea:focus, .ph-field select:focus { outline: none; border-color: var(--ph-clay); }
@@ -5357,7 +5357,7 @@ const CUSTOMER_STYLES = `
 .ph-report-row { display: flex; align-items: center; gap: 8px; }
 .ph-report-prefix { font-size: 13.5px; color: var(--ph-taupe-soft); }
 .ph-report-input {
-  width: 110px; font-size: 13.5px; padding: 9px 10px; border: 1.5px solid var(--ph-sand); border-radius: var(--ph-radius-sm); font-family: var(--ph-mono);
+  width: 110px; font-size: 16px; padding: 9px 10px; border: 1.5px solid var(--ph-sand); border-radius: var(--ph-radius-sm); font-family: var(--ph-mono);
 }
 .ph-report-input:focus { outline: none; border-color: var(--ph-clay); }
 
@@ -6303,7 +6303,7 @@ const CUSTOMER_STYLES = `
   border: 1px solid rgba(255,255,255,0.3);
   border-radius: 4px;
   padding: 5px 8px;
-  font-size: 12px;
+  font-size: 16px;
   color: #fff;
   font-family: inherit;
   outline: none;
