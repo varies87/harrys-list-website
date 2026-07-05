@@ -5080,7 +5080,7 @@ const CUSTOMER_STYLES = `
 .ph-trust-banner strong { font-size: 15px; font-family: var(--ph-serif); }
 .ph-trust-banner span { font-size: 13px; color: rgba(253,251,246,0.78); line-height: 1.6; }
 
-.ph-directory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; align-items: start; }
+.ph-directory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; align-items: stretch; }
 .ph-empty {
   color: var(--ph-taupe-soft);
   padding: 56px 0;
@@ -5158,7 +5158,7 @@ const CUSTOMER_STYLES = `
 
 .ph-select-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ph-taupe); cursor: pointer; white-space: nowrap; font-weight: 600; }
 .ph-select-toggle input { accent-color: var(--ph-clay); width: 15px; height: 15px; }
-.ph-card-actions { display: flex; gap: 8px; margin-top: 4px; }
+.ph-card-actions { display: flex; gap: 8px; margin-top: auto; padding-top: 4px; }
 .ph-card-view-btn {
   flex: 0 0 auto; padding: 10px 16px; border-radius: var(--ph-radius-md);
   border: 1px solid var(--ph-sand-line); background: var(--ph-surface);

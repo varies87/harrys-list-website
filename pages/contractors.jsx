@@ -29,6 +29,21 @@ export default function ContractorsPage() {
           name="description"
           content="Join Harry's List, the DFW trade directory with no pay-per-lead. List your business for free and only pay a small fee after a homeowner confirms a job is done."
         />
+        {/* Open Graph / Twitter so the link preview (texts, social) shows the
+            Harry's List card instead of the Vercel default. Mirrors the
+            homepage tags but with contractor-facing copy. */}
+        <meta property="og:title" content="List your business free — Harry's List DFW" />
+        <meta property="og:description" content="No pay-per-lead. Join the DFW trade directory built on verified reviews — only pay a small fee after a homeowner confirms a job is done." />
+        <meta property="og:url" content="https://harryslistdfw.com/contractors" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Harry's List" />
+        <meta property="og:image" content="https://harryslistdfw.com/og-image.png" />
+        <meta property="og:image:width" content="1254" />
+        <meta property="og:image:height" content="1254" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="List your business free — Harry's List DFW" />
+        <meta name="twitter:description" content="No pay-per-lead. Join the DFW trade directory built on verified reviews." />
+        <meta name="twitter:image" content="https://harryslistdfw.com/og-image.png" />
         {/* This page is landed on directly from contractor-targeted ads, unlike
             most app-shell pages, so it's worth letting it be indexed/shared
             rather than blocking it -- it now has real content, not just a
