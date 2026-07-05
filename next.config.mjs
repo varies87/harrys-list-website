@@ -13,8 +13,9 @@ const ContentSecurityPolicy = [
   "img-src 'self' data: https:",
   "font-src 'self' https://cdn.jsdelivr.net data:",
   "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
-  "script-src 'self' 'unsafe-inline' https://js.stripe.com",
-  "connect-src 'self' https://harrys-list-backend.vercel.app https://*.supabase.co https://api.stripe.com",
+  "script-src 'self' 'unsafe-inline' https://js.stripe.com https://connect.facebook.net https://www.clarity.ms https://*.clarity.ms",
+  "worker-src 'self' blob:",
+  "connect-src 'self' https://harrys-list-backend.vercel.app https://*.supabase.co https://api.stripe.com https://www.facebook.com https://connect.facebook.net https://*.clarity.ms https://c.clarity.ms https://*.bing.com",
   "frame-src https://js.stripe.com https://hooks.stripe.com",
 ].join("; ");
 
