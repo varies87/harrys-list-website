@@ -304,7 +304,7 @@ function ContractorCard({ contractor, selected, onToggleSelect, onViewProfile, i
       </div>
 
       <p className="ph-card-bio">
-        {contractor.bio.length > 120 ? contractor.bio.slice(0, 120).replace(/\s\S*$/, "") + "…" : contractor.bio}
+        {contractor.bio.length > 95 ? contractor.bio.slice(0, 95).replace(/\s\S*$/, "") + "…" : contractor.bio}
       </p>
 
       <div className="ph-card-meta">
@@ -5080,7 +5080,7 @@ const CUSTOMER_STYLES = `
 .ph-trust-banner strong { font-size: 15px; font-family: var(--ph-serif); }
 .ph-trust-banner span { font-size: 13px; color: rgba(253,251,246,0.78); line-height: 1.6; }
 
-.ph-directory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
+.ph-directory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; align-items: start; }
 .ph-empty {
   color: var(--ph-taupe-soft);
   padding: 56px 0;
@@ -5093,10 +5093,10 @@ const CUSTOMER_STYLES = `
   background: var(--ph-surface);
   border: 1px solid var(--ph-sand-line);
   border-radius: var(--ph-radius-md);
-  padding: 18px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   box-shadow: var(--ph-shadow-sm);
   transition: box-shadow 0.18s ease, transform 0.18s ease;
 }
@@ -5138,7 +5138,11 @@ const CUSTOMER_STYLES = `
   font-size: 11.5px; color: var(--ph-clay); margin-top: 3px; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.04em;
 }
-.ph-card-bio { font-size: 13.5px; color: var(--ph-ink-soft); margin: 0; line-height: 1.6; }
+.ph-card-bio {
+  font-size: 13px; color: var(--ph-ink-soft); margin: 0; line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  min-height: 39px;
+}
 .ph-card-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--ph-taupe-soft); }
 .ph-meta-icon { margin-right: 5px; font-style: normal; }
 .ph-card-bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid var(--ph-sand-line); }
@@ -5154,7 +5158,7 @@ const CUSTOMER_STYLES = `
 
 .ph-select-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ph-taupe); cursor: pointer; white-space: nowrap; font-weight: 600; }
 .ph-select-toggle input { accent-color: var(--ph-clay); width: 15px; height: 15px; }
-.ph-card-actions { display: flex; gap: 8px; margin-top: 14px; }
+.ph-card-actions { display: flex; gap: 8px; margin-top: 4px; }
 .ph-card-view-btn {
   flex: 0 0 auto; padding: 10px 16px; border-radius: var(--ph-radius-md);
   border: 1px solid var(--ph-sand-line); background: var(--ph-surface);
@@ -5268,8 +5272,10 @@ const CUSTOMER_STYLES = `
 .ph-review { padding: 12px 0; border-bottom: 1px solid var(--ph-sand-line); }
 .ph-review p { margin: 5px 0; font-size: 13.5px; }
 .ph-card-review {
-  margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--ph-sand-line);
-  font-size: 13px; font-style: italic; color: var(--ph-ink-soft); line-height: 1.5;
+  margin: 2px 0 0; padding-top: 8px; border-top: 1px solid var(--ph-sand-line);
+  font-size: 12.5px; font-style: italic; color: var(--ph-ink-soft); line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  min-height: 46px;
 }
 .ph-card-review-tag { font-style: normal; font-size: 11.5px; color: var(--ph-taupe-soft); white-space: nowrap; }
 .ph-review-author { font-size: 12px; color: var(--ph-taupe-soft); }
