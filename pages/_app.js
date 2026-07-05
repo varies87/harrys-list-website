@@ -11,7 +11,7 @@ export default function App({ Component, pageProps }) {
     <>
       <Head>
         {/* Allow pinch-zoom for accessibility (was previously disabled) (M-5) */}
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         {/* Explicit favicon link -- Pages Router doesn't auto-use
             public/favicon.ico, so without this the browser guesses and can
             fall back to a default icon. */}

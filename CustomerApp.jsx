@@ -300,10 +300,6 @@ function ContractorCard({ contractor, selected, onToggleSelect, onViewProfile, i
               {isFavorite ? "★" : "☆"}
             </button>
           )}
-          <label className="ph-select-toggle">
-            <input type="checkbox" checked={selected} onChange={() => onToggleSelect(contractor.id)} />
-            <span>Select</span>
-          </label>
         </div>
       </div>
 
@@ -347,6 +343,19 @@ function ContractorCard({ contractor, selected, onToggleSelect, onViewProfile, i
           <p className="ph-card-review">“{snippet}” <span className="ph-card-review-tag">— verified customer</span></p>
         );
       })()}
+
+      <div className="ph-card-actions">
+        <button type="button" className="ph-card-view-btn" onClick={() => onViewProfile(contractor)}>
+          View profile
+        </button>
+        <button
+          type="button"
+          className={`ph-card-select-btn ${selected ? "is-selected" : ""}`}
+          onClick={() => onToggleSelect(contractor.id)}
+        >
+          {selected ? "✓ Selected for quote" : "Select for quote"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -842,7 +851,7 @@ function WelcomeModal({ onClose }) {
             <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--ph-clay)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 15, flexShrink: 0 }}>1</div>
             <div>
               <div style={{ fontWeight: 700, color: "var(--ph-ink)", marginBottom: 2 }}>Browse and select contractors</div>
-              <div className="ph-muted small">Check the box on any contractor you want to reach out to. You can select multiple.</div>
+              <div className="ph-muted small">Tap "Select for quote" on any contractor you want to reach out to. You can select several, then request quotes from all of them at once.</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
@@ -4429,6 +4438,51 @@ function ContractorDashboard({ contractor, quoteRequests, onNavigate }) {
 // ContractorShell -- the sidebar + main content wrapper for signed-in
 // contractors. Replaces the old tab-bar toolbar entirely.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ContractorTutorial -- an interactive, stepped walkthrough of how the platform
+// works for contractors. Launched on demand from the mobile "More" menu.
+// ---------------------------------------------------------------------------
+function ContractorTutorial({ onClose }) {
+  const steps = [
+    { icon: "ti-inbox", title: "Requests come to you", body: "Homeowners in your area send quote requests straight to you — no pay-per-lead, no bidding wars. You only hear from people who want your work." },
+    { icon: "ti-send", title: "Send your quote", body: "Open a request and send your price right in the app. The homeowner's contact details unlock once they accept your quote." },
+    { icon: "ti-circle-check", title: "Get the job confirmed", body: "After you finish the work, the homeowner confirms it's done and the final amount. That confirmation is what starts payment — not you chasing an invoice." },
+    { icon: "ti-credit-card", title: "Only pay after you're paid", body: "You keep 96–99% of every job. A small platform fee (1–4%) is owed only after a confirmed job — never up front. And as a founding member, your first job's fee is on us." },
+    { icon: "ti-star", title: "Reviews grow your business", body: "Every confirmed job earns a verified review. Real reviews bring more homeowners — and no one can fake or buy their way past you." },
+    { icon: "ti-qrcode", title: "Bring your own customers", body: "Share your Harry's List profile or QR code with existing customers to collect reviews and run their jobs through the app too." },
+  ];
+  const [step, setStep] = useState(0);
+  const s = steps[step];
+  const isLast = step === steps.length - 1;
+  return (
+    <Modal onClose={onClose}>
+      <div className="ph-modal ct-tutorial" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
+        <div className="ct-tut-progress">
+          {steps.map((_, i) => (
+            <span key={i} className={`ct-tut-dot ${i === step ? "is-active" : ""} ${i < step ? "is-done" : ""}`} />
+          ))}
+        </div>
+        <div className="ct-tut-icon"><i className={`ti ${s.icon}`} aria-hidden="true" /></div>
+        <h2 style={{ textAlign: "center" }}>{s.title}</h2>
+        <p className="ph-muted" style={{ textAlign: "center", lineHeight: 1.6, marginBottom: 28 }}>{s.body}</p>
+        <div className="ct-tut-nav">
+          {step > 0 ? (
+            <button type="button" className="ph-btn-secondary" onClick={() => setStep(step - 1)}>Back</button>
+          ) : (
+            <span />
+          )}
+          {isLast ? (
+            <button type="button" className="ph-btn-primary" onClick={onClose}>Got it</button>
+          ) : (
+            <button type="button" className="ph-btn-primary" onClick={() => setStep(step + 1)}>Next</button>
+          )}
+        </div>
+        <button type="button" className="ct-tut-skip" onClick={onClose}>Skip tutorial</button>
+      </div>
+    </Modal>
+  );
+}
+
 function ContractorShell({
   contractor, quoteRequests, screen, onNavigate, onLogout,
   children,
@@ -4457,6 +4511,27 @@ function ContractorShell({
   ];
 
   const allNavItems = [...navItems, ...accountItems];
+
+  // Mobile bottom bar: 4 always-visible daily-drivers; the rest live under "More".
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+
+  // Show the how-it-works tutorial automatically the first time a contractor
+  // lands on their dashboard, then remember it so it never auto-opens again.
+  // They can always re-open it from the "More" menu.
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("harryslist_contractor_tutorial_seen")) {
+        setTutorialOpen(true);
+      }
+    } catch (e) { /* private mode -- just skip the auto-open */ }
+  }, []);
+  const dismissTutorial = () => {
+    try { localStorage.setItem("harryslist_contractor_tutorial_seen", "true"); } catch (e) {}
+    setTutorialOpen(false);
+  };
+  const primaryMobileItems = [navItems[0], navItems[1], navItems[2], accountItems[0]];
+  const moreMobileItems = [accountItems[1], accountItems[2], accountItems[3]];
 
   const suspended = contractorIsSuspended(contractor);
 
@@ -4539,28 +4614,71 @@ function ContractorShell({
       </div>
 
       {/* Top tab bar -- mobile only */}
-      <nav className="cd-bottom-nav">
-        {allNavItems.map((item) => (
+      <nav className="cd-top-nav">
+        {primaryMobileItems.map((item) => (
           <button
             key={item.id}
             type="button"
-            className={`cd-bottom-nav-item ${effectiveScreen === item.id ? "is-active" : ""} ${suspended && item.id !== "payments" ? "is-locked" : ""}`}
+            className={`cd-top-nav-item ${effectiveScreen === item.id ? "is-active" : ""} ${suspended && item.id !== "payments" ? "is-locked" : ""}`}
             onClick={() => !suspended || item.id === "payments" ? onNavigate(item.id) : null}
           >
-            <div className="cd-bottom-nav-icon">
+            <div className="cd-top-nav-icon">
               <i className={`ti ${item.icon}`} aria-hidden="true" />
-              {item.badge > 0 && <span className="cd-bottom-nav-badge">{item.badge}</span>}
+              {item.badge > 0 && <span className="cd-top-nav-badge">{item.badge}</span>}
             </div>
-            <span className="cd-bottom-nav-label">{item.mobileLabel || item.label}</span>
+            <span className="cd-top-nav-label">{item.mobileLabel || item.label}</span>
           </button>
         ))}
-        <button type="button" className="cd-bottom-nav-item" onClick={onLogout}>
-          <div className="cd-bottom-nav-icon">
-            <i className="ti ti-logout" aria-hidden="true" />
-          </div>
-          <span className="cd-bottom-nav-label">Sign out</span>
-        </button>
       </nav>
+
+      <button
+        type="button"
+        className={`cd-fab ${moreMobileItems.some((i) => i.id === effectiveScreen) ? "is-active" : ""}`}
+        onClick={() => setMoreOpen(true)}
+        aria-label="More options"
+      >
+        <i className="ti ti-dots" aria-hidden="true" />
+      </button>
+
+      {moreOpen && (
+        <div className="cd-more-backdrop" onClick={() => setMoreOpen(false)}>
+          <div className="cd-more-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="cd-more-handle" />
+            <button
+              type="button"
+              className="cd-more-item cd-more-tutorial"
+              onClick={() => { setMoreOpen(false); setTutorialOpen(true); }}
+            >
+              <i className="ti ti-help" aria-hidden="true" />
+              <span>How it works</span>
+            </button>
+            {moreMobileItems.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`cd-more-item ${effectiveScreen === item.id ? "is-active" : ""} ${suspended ? "is-locked" : ""}`}
+                onClick={() => {
+                  if (suspended) return;
+                  onNavigate(item.id);
+                  setMoreOpen(false);
+                }}
+              >
+                <i className={`ti ${item.icon}`} aria-hidden="true" />
+                <span>{item.label}</span>
+              </button>
+            ))}
+            <button
+              type="button"
+              className="cd-more-item cd-more-signout"
+              onClick={() => { setMoreOpen(false); onLogout(); }}
+            >
+              <i className="ti ti-logout" aria-hidden="true" />
+              <span>Sign out</span>
+            </button>
+          </div>
+        </div>
+      )}
+      {tutorialOpen && <ContractorTutorial onClose={dismissTutorial} />}
     </div>
   );
 }
@@ -5036,6 +5154,25 @@ const CUSTOMER_STYLES = `
 
 .ph-select-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ph-taupe); cursor: pointer; white-space: nowrap; font-weight: 600; }
 .ph-select-toggle input { accent-color: var(--ph-clay); width: 15px; height: 15px; }
+.ph-card-actions { display: flex; gap: 8px; margin-top: 14px; }
+.ph-card-view-btn {
+  flex: 0 0 auto; padding: 10px 16px; border-radius: var(--ph-radius-md);
+  border: 1px solid var(--ph-sand-line); background: var(--ph-surface);
+  color: var(--ph-ink); font-family: inherit; font-size: 13.5px; font-weight: 600;
+  cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ph-card-view-btn:hover { border-color: var(--ph-clay); color: var(--ph-clay); }
+.ph-card-select-btn {
+  flex: 1 1 auto; padding: 10px 16px; border-radius: var(--ph-radius-md);
+  border: 1px solid var(--ph-clay); background: var(--ph-surface);
+  color: var(--ph-clay); font-family: inherit; font-size: 13.5px; font-weight: 700;
+  cursor: pointer; transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.ph-card-select-btn:hover { background: rgba(193, 98, 42, 0.08); }
+.ph-card-select-btn.is-selected {
+  background: var(--ph-clay); color: #fff;
+  box-shadow: 0 2px 8px rgba(193, 98, 42, 0.3);
+}
 
 .ph-no-fee-badge {
   align-self: flex-start; font-size: 11px; font-weight: 700; color: var(--ph-green-text); background: var(--ph-green-tint);
@@ -5918,73 +6055,160 @@ const CUSTOMER_STYLES = `
   .cd-sidebar { display: none; }
   .cd-stat-grid { grid-template-columns: 1fr 1fr; }
   .cd-two-col { grid-template-columns: 1fr; }
-  .cd-content { padding: 72px 16px 32px; } /* top padding for the nav bar */
+  .cd-content { padding: calc(env(safe-area-inset-top, 0px) + 72px) 16px calc(env(safe-area-inset-bottom, 0px) + 90px); } /* top clears the floating pill below the island; bottom clears the FAB */
   .cd-page-header { flex-wrap: wrap; gap: 10px; }
 }
 
-/* Top tab bar -- mobile only */
-.cd-bottom-nav { display: none; }
+/* Mobile nav: top pill (primary) + floating FAB (overflow) */
+.cd-top-nav { display: none; }
+.cd-fab { display: none; }
 
 @media (max-width: 768px) {
-  .cd-bottom-nav {
+  .cd-top-nav {
     display: flex;
     position: fixed;
-    top: 10px; left: 12px; right: 12px;
-    background: #1C2B22;
+    top: calc(env(safe-area-inset-top, 0px) + 10px);
+    left: 12px; right: 12px;
+    background: rgba(23, 36, 29, 0.82);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+    backdrop-filter: blur(16px) saturate(1.2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 999px;
     z-index: 100;
-    padding: 5px 6px;
-    gap: 2px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+    padding: 6px 7px;
+    gap: 3px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
-  .cd-bottom-nav::-webkit-scrollbar { display: none; }
-  .cd-bottom-nav-item {
+  .cd-top-nav::-webkit-scrollbar { display: none; }
+  .cd-top-nav-item {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     flex: 1 1 0;
     min-width: 0;
-    padding: 6px 4px;
+    padding: 7px 4px 6px;
     border-radius: 999px;
     background: none;
     border: none;
     cursor: pointer;
     font-family: inherit;
-    color: rgba(255,255,255,0.45);
-    transition: background 0.15s ease, color 0.15s ease;
+    color: rgba(255, 255, 255, 0.5);
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
     position: relative;
-    gap: 2px;
+    gap: 3px;
+    -webkit-tap-highlight-color: transparent;
   }
-  .cd-bottom-nav-item.is-active {
-    background: rgba(193,98,42,0.3);
-    color: #F0A070;
+  .cd-top-nav-item.is-active {
+    background: linear-gradient(160deg, #D4703A 0%, #B4531F 100%);
+    color: #FFF6EC;
+    box-shadow: 0 3px 10px rgba(180, 83, 31, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18);
   }
-  .cd-bottom-nav-item:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.8); }
-  .cd-bottom-nav-icon { position: relative; font-size: 18px; line-height: 1; display: flex; }
-  .cd-bottom-nav-icon i { font-size: 18px; }
-  .cd-bottom-nav-badge {
+  .cd-top-nav-item:active { transform: scale(0.94); }
+  .cd-top-nav-icon { position: relative; font-size: 19px; line-height: 1; display: flex; }
+  .cd-top-nav-icon i { font-size: 19px; }
+  .cd-top-nav-badge {
     position: absolute;
-    top: -4px; right: -6px;
-    background: #C1622A;
-    color: #fff;
+    top: -5px; right: -7px;
+    background: #E8945A;
+    color: #2A1608;
     font-size: 9px;
-    font-weight: 700;
+    font-weight: 800;
     padding: 1px 4px;
     border-radius: 10px;
-    min-width: 14px;
+    min-width: 15px;
     text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
-  .cd-bottom-nav-label {
-    font-size: 9px;
+  .cd-top-nav-label {
+    font-size: 9.5px;
     font-weight: 600;
+    letter-spacing: 0.01em;
     white-space: nowrap;
     color: inherit;
   }
+
+  .cd-fab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+    right: 18px;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(160deg, #D4703A 0%, #B4531F 100%);
+    color: #FFF6EC;
+    border: none;
+    cursor: pointer;
+    z-index: 100;
+    box-shadow: 0 6px 20px rgba(180, 83, 31, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: transform 0.14s ease, box-shadow 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cd-fab i { font-size: 26px; }
+  .cd-fab:active { transform: scale(0.92); }
+  .cd-fab.is-active {
+    box-shadow: 0 6px 20px rgba(180, 83, 31, 0.6), 0 0 0 3px rgba(232, 148, 90, 0.4);
+  }
 }
+
+.cd-more-backdrop {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0, 0, 0, 0.42);
+  display: flex; align-items: flex-end;
+  animation: cd-fade-in 0.18s ease;
+}
+.cd-more-sheet {
+  width: 100%;
+  background: #FDFBF6;
+  border-radius: 20px 20px 0 0;
+  padding: 6px 14px calc(env(safe-area-inset-bottom, 0px) + 14px);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.25);
+  animation: cd-slide-up 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cd-more-handle { width: 38px; height: 4px; border-radius: 999px; background: #DCD2C2; margin: 10px auto 8px; }
+.cd-more-item {
+  display: flex; align-items: center; gap: 14px; width: 100%;
+  padding: 15px 12px; border: none; background: none; cursor: pointer;
+  font-family: inherit; font-size: 15px; font-weight: 500; color: #1C2B22;
+  border-radius: 12px; text-align: left;
+}
+.cd-more-item i { font-size: 21px; color: #8A7A65; width: 24px; text-align: center; }
+.cd-more-item.is-active { background: rgba(193, 98, 42, 0.1); color: #B4531F; }
+.cd-more-item.is-active i { color: #B4531F; }
+.cd-more-item.is-locked { opacity: 0.4; }
+.cd-more-signout { color: #A32D2D; }
+.cd-more-signout i { color: #A32D2D; }
+@keyframes cd-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cd-slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+.cd-more-tutorial { color: #B4531F; }
+.cd-more-tutorial i { color: #B4531F; }
+
+.ct-tutorial { text-align: center; }
+.ct-tut-progress { display: flex; gap: 6px; justify-content: center; margin-bottom: 26px; }
+.ct-tut-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ph-sand-line); transition: all 0.25s ease; }
+.ct-tut-dot.is-active { background: var(--ph-clay); width: 22px; border-radius: 999px; }
+.ct-tut-dot.is-done { background: var(--ph-clay); opacity: 0.45; }
+.ct-tut-icon {
+  width: 70px; height: 70px; border-radius: 20px; margin: 0 auto 20px;
+  background: linear-gradient(160deg, #E8A33D 0%, #C1622A 100%);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 22px rgba(193, 98, 42, 0.32);
+}
+.ct-tut-icon i { font-size: 34px; color: #fff; }
+.ct-tut-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.ct-tut-nav > button { min-width: 118px; }
+.ct-tut-nav > span { flex: 0 0 118px; }
+.ct-tut-skip {
+  display: block; margin: 16px auto 0; background: none; border: none;
+  color: var(--ph-taupe-soft); font-size: 13px; cursor: pointer; font-family: inherit;
+}
+.ct-tut-skip:hover { color: var(--ph-ink); }
 
 /* Portfolio grid */
 .cd-portfolio-empty {
