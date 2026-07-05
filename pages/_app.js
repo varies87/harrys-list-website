@@ -6,6 +6,10 @@ import "../styles/globals.css";
 // Left blank locally so nothing fires until it's configured in production.
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
+// Microsoft Clarity project ID -- set NEXT_PUBLIC_CLARITY_ID in Vercel env vars.
+// Powers free session recordings + heatmaps. Only loads when configured.
+const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID;
+
 export default function App({ Component, pageProps }) {
   return (
     <>
@@ -44,6 +48,21 @@ export default function App({ Component, pageProps }) {
             'https://connect.facebook.net/en_US/fbevents.js');
             fbq('init', '${META_PIXEL_ID}');
             fbq('track', 'PageView');
+          `}
+        </Script>
+      )}
+
+      {/* Microsoft Clarity -- session recordings + heatmaps. Only loads if a
+          project ID is configured. Uses the "clarity" id, not "clarity" as the
+          created global, to avoid a known id collision. */}
+      {CLARITY_ID && (
+        <Script id="ms-clarity" strategy="afterInteractive">
+          {`
+            (function(c,l,a,r,i,t,y){
+              c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+              t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+              y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+            })(window, document, "clarity", "script", "${CLARITY_ID}");
           `}
         </Script>
       )}
