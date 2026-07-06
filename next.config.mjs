@@ -10,7 +10,7 @@ const ContentSecurityPolicy = [
   "base-uri 'self'",
   "object-src 'none'",
   "frame-ancestors 'none'",
-  "img-src 'self' data: https:",
+  "img-src 'self' data: blob: https:",
   "font-src 'self' https://cdn.jsdelivr.net data:",
   "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
   "script-src 'self' 'unsafe-inline' https://js.stripe.com https://connect.facebook.net https://www.clarity.ms https://*.clarity.ms",
