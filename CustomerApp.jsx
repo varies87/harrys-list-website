@@ -1767,6 +1767,7 @@ function ReviewGateModal({ onClose, unreviewedJobs, onReviewSubmitted }) {
 
 function HomeownerView({
   contractors,
+  setContractors,
   quoteRequests,
   setQuoteRequests,
   homeownerJobs,
@@ -4090,6 +4091,7 @@ export default function CustomerApp() {
                   ) : (
                     <HomeownerView
                       contractors={contractors}
+                      setContractors={setContractors}
                       quoteRequests={quoteRequests}
                       setQuoteRequests={setQuoteRequests}
                       homeownerJobs={homeownerJobs}
