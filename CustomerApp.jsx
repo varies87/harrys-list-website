@@ -379,6 +379,7 @@ function ContractorProfileModal({ contractor, onClose, currentHomeowner, onToggl
   const [statusLoaded, setStatusLoaded] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [photosLoaded, setPhotosLoaded] = useState(false);
+  const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
     if (!contractor) return;
@@ -496,31 +497,8 @@ function ContractorProfileModal({ contractor, onClose, currentHomeowner, onToggl
           </div>
         )}
 
-        {/* Portfolio photos */}
-        {photosLoaded && photos.length > 0 && (
-          <div style={{ marginBottom: 20 }}>
-            <div className="ph-profile-label" style={{ marginBottom: 10 }}>Past work</div>
-            <div className="ph-portfolio-grid">
-              {photos.map((photo) => (
-                <img
-                  key={photo.id}
-                  src={photo.thumbnailUrl}
-                  alt={photo.caption || "Portfolio photo"}
-                  className="ph-portfolio-thumb"
-                  title={photo.caption || ""}
-                  loading="lazy"
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Open portfolio photo${photo.caption ? `: ${photo.caption}` : ""} in a new tab`}
-                  onClick={() => window.open(photo.publicUrl, "_blank", "noopener,noreferrer")}
-                  onKeyDown={activateOnKey(() => window.open(photo.publicUrl, "_blank", "noopener,noreferrer"))}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Actions */}
+        {/* Actions — kept above the photo grid so "Request a quote" stays
+            visible on open instead of getting pushed below a tall gallery. */}
         <div className="ph-profile-card-actions">
           {currentHomeowner ? (
             <>
@@ -546,7 +524,38 @@ function ContractorProfileModal({ contractor, onClose, currentHomeowner, onToggl
             </button>
           )}
         </div>
+
+        {/* Portfolio photos — open in an on-page lightbox, never off to Supabase */}
+        {photosLoaded && photos.length > 0 && (
+          <div style={{ marginTop: 22 }}>
+            <div className="ph-profile-label" style={{ marginBottom: 10 }}>Past work</div>
+            <div className="ph-portfolio-grid">
+              {photos.map((photo) => (
+                <img
+                  key={photo.id}
+                  src={photo.thumbnailUrl}
+                  alt={photo.caption || "Portfolio photo"}
+                  className="ph-portfolio-thumb"
+                  title={photo.caption || ""}
+                  loading="lazy"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View portfolio photo${photo.caption ? `: ${photo.caption}` : ""} full size`}
+                  onClick={() => setLightbox(photo.publicUrl)}
+                  onKeyDown={activateOnKey(() => setLightbox(photo.publicUrl))}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      {lightbox && (
+        <div className="cd-lightbox" onClick={(e) => { e.stopPropagation(); setLightbox(null); }}>
+          <button className="ph-modal-close" onClick={(e) => { e.stopPropagation(); setLightbox(null); }} aria-label="Close">×</button>
+          <img src={lightbox} alt="Full size" className="cd-lightbox-img" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
     </Modal>
   );
 }
