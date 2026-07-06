@@ -1938,6 +1938,12 @@ function HomeownerView({
   }, []);
 
   const selectedContractors = contractors.filter((c) => selectedIds.has(c.id));
+  // Who a quote request actually goes to: a profile-popup / public-profile
+  // "Request a quote" click targets that one contractor (quoteTargetContractors);
+  // otherwise it's the checkbox selection. The modal and the submit handler
+  // MUST use the same list -- they previously diverged, so a profile-initiated
+  // request submitted the (possibly empty or unrelated) checkbox selection.
+  const quoteContractors = quoteTargetContractors.length > 0 ? quoteTargetContractors : selectedContractors;
   const allCities = [...INDEX.cityToZips.keys()];
 
   // Build jobsToConfirm from homeownerJobs (independent of contractor objects)
@@ -1973,7 +1979,7 @@ function HomeownerView({
         timeline: form.timeline,
         zip: form.zip,
         address: form.address || null,
-        contractorIds: selectedContractors.map((c) => c.id),
+        contractorIds: quoteContractors.map((c) => c.id),
       });
 
       // Upload photos in parallel after the quote request is created
@@ -1994,8 +2000,9 @@ function HomeownerView({
 
       setQuoteRequests((prev) => [data.quoteRequest, ...prev]);
       setShowQuoteModal(false);
-      setConfirmation(`Quote request sent to ${selectedContractors.length} contractor${selectedContractors.length === 1 ? "" : "s"}.`);
+      setConfirmation(`Quote request sent to ${quoteContractors.length} contractor${quoteContractors.length === 1 ? "" : "s"}.`);
       setSelectedIds(new Set());
+      setQuoteTargetContractors([]);
       setTimeout(() => setConfirmation(null), 4000);
     } catch (err) {
       setConfirmation({ text: "Could not send quote request: " + err.message, isError: true });
@@ -2534,7 +2541,7 @@ function HomeownerView({
       />
       {showQuoteModal && (
         <QuoteRequestModal
-          contractors={quoteTargetContractors.length > 0 ? quoteTargetContractors : selectedContractors}
+          contractors={quoteContractors}
           onClose={() => { setShowQuoteModal(false); setQuoteTargetContractors([]); }}
           onSubmit={handleSubmitQuote}
           defaultZip={currentHomeowner ? currentHomeowner.zip : ""}
