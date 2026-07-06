@@ -5121,6 +5121,8 @@ const CUSTOMER_STYLES = `
   font-family: var(--ph-serif);
 }
 .ph-avatar.lg { width: 56px; height: 56px; font-size: 18px; border-radius: 13px; }
+/* Bigger logo on the directory cards (both uploaded logos and initials fallback) */
+.ph-card-id .ph-avatar { width: 54px; height: 54px; border-radius: 12px; font-size: 16px; }
 .ph-card-name {
   background: none; border: none; padding: 0; font-size: 15px; font-weight: 700;
   color: var(--ph-ink); text-align: left; cursor: pointer; font-family: var(--ph-serif);
