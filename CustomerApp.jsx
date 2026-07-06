@@ -6402,7 +6402,7 @@ export function ContractorPublicProfile() {
         .pp-review-text { font-size: 13.5px; color: var(--ph-ink-soft); margin: 6px 0 4px; line-height: 1.6; }
         .pp-review-date { font-size: 11.5px; color: var(--ph-taupe-soft); }
         .pp-cta { text-align: center; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--ph-sand-line); }
-        .pp-back { font-size: 13px; color: var(--ph-taupe); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 20px; }
+        .pp-back { font-size: 14px; color: var(--ph-taupe); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 8px 4px; margin: 0 -4px 12px; }
         .pp-back:hover { color: var(--ph-ink); }
         @media (max-width: 640px) { .pp-meta { grid-template-columns: 1fr; } .pp-photo-grid { grid-template-columns: repeat(2, 1fr); } }
       `}</style>
@@ -6414,7 +6414,7 @@ export function ContractorPublicProfile() {
             <span className="ph-header-subtitle">DFW Trade Directory</span>
           </div>
         </div>
-        <a href="/" className="ph-contractor-link">Browse directory →</a>
+        <a href="/#directory" className="ph-contractor-link">Browse directory →</a>
       </header>
 
       <main className="pp-wrap">
@@ -6423,7 +6423,7 @@ export function ContractorPublicProfile() {
 
         {contractor && (
           <>
-            <a href="/" className="pp-back">← Back to directory</a>
+            <a href="/#directory" className="pp-back">← Back to directory</a>
 
             {/* Hero header */}
             <div className="pp-header">
