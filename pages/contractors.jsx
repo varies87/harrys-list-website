@@ -233,7 +233,7 @@ const CONTRACTOR_LANDING_STYLES = `
 }
 .cl-hero-inner { max-width: 620px; margin: 0 auto; }
 .cl-wordmark {
-  display: inline-block; font-family: var(--cl-serif); font-size: 22px; font-weight: 600;
+  display: block; font-family: var(--cl-serif); font-size: 22px; font-weight: 600;
   letter-spacing: 0.01em; color: #FDFBF6; text-decoration: none; margin-bottom: 28px;
 }
 .cl-wordmark:hover { color: #fff; }
