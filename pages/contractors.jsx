@@ -128,7 +128,10 @@ function ContractorHero() {
 
       <section className="cl-hero">
         <header className="cl-topbar">
-          <a href="/" className="cl-wordmark">Harry's List</a>
+          <a href="/" className="cl-wordmark">
+            <span className="cl-wordmark-name">Harry's List</span>
+            <span className="cl-wordmark-sub">DFW Trade Directory</span>
+          </a>
           <a href="/#directory" className="cl-topbar-link">Browse the directory →</a>
         </header>
         <div className="cl-hero-inner">
@@ -239,8 +242,16 @@ const CONTRACTOR_LANDING_STYLES = `
   max-width: 1000px; margin: 0 auto 44px; gap: 16px;
 }
 .cl-wordmark {
-  font-family: var(--cl-serif); font-size: 21px; font-weight: 600;
-  letter-spacing: 0.01em; color: #FDFBF6; text-decoration: none; line-height: 1;
+  display: inline-flex; flex-direction: column; line-height: 1.1;
+  text-decoration: none; gap: 3px;
+}
+.cl-wordmark-name {
+  font-family: var(--cl-serif); font-size: 26px; font-weight: 600;
+  letter-spacing: 0.01em; color: #FDFBF6;
+}
+.cl-wordmark-sub {
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--cl-gold);
 }
 .cl-topbar-link {
   font-size: 13px; font-weight: 600; color: rgba(253,251,246,0.62);
