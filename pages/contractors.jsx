@@ -127,8 +127,11 @@ function ContractorHero() {
       <style>{CONTRACTOR_LANDING_STYLES}</style>
 
       <section className="cl-hero">
-        <div className="cl-hero-inner">
+        <header className="cl-topbar">
           <a href="/" className="cl-wordmark">Harry's List</a>
+          <a href="/#directory" className="cl-topbar-link">Browse the directory →</a>
+        </header>
+        <div className="cl-hero-inner">
           {foundingActive && (
             <div className="cl-founding-strip">
               <span className="cl-founding-strip-badge">★ First Fifty</span>
@@ -228,15 +231,24 @@ const CONTRACTOR_LANDING_STYLES = `
   background: var(--cl-ink);
   background-image: linear-gradient(165deg, #20342a 0%, var(--cl-ink) 60%);
   color: var(--cl-bg);
-  padding: 60px 24px 52px;
+  padding: 20px 24px 64px;
   text-align: center;
 }
-.cl-hero-inner { max-width: 620px; margin: 0 auto; }
-.cl-wordmark {
-  display: block; font-family: var(--cl-serif); font-size: 22px; font-weight: 600;
-  letter-spacing: 0.01em; color: #FDFBF6; text-decoration: none; margin-bottom: 28px;
+.cl-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: 1000px; margin: 0 auto 44px; gap: 16px;
 }
-.cl-wordmark:hover { color: #fff; }
+.cl-wordmark {
+  font-family: var(--cl-serif); font-size: 21px; font-weight: 600;
+  letter-spacing: 0.01em; color: #FDFBF6; text-decoration: none; line-height: 1;
+}
+.cl-topbar-link {
+  font-size: 13px; font-weight: 600; color: rgba(253,251,246,0.62);
+  text-decoration: none; padding: 8px 14px; border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 8px; white-space: nowrap; transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.cl-topbar-link:hover { color: #fff; border-color: rgba(255,255,255,0.45); background: rgba(255,255,255,0.06); }
+.cl-hero-inner { max-width: 620px; margin: 0 auto; }
 .cl-eyebrow {
   display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--cl-gold); margin-bottom: 16px;
@@ -302,7 +314,9 @@ const CONTRACTOR_LANDING_STYLES = `
 .cl-closer-sub { font-size: 14px; color: #B8C4BB; margin: 0 0 20px; }
 @media (max-width: 620px) {
   .cl-fee-grid { grid-template-columns: repeat(2, 1fr); }
-  .cl-hero { padding: 48px 20px 40px; }
+  .cl-hero { padding: 16px 20px 48px; }
+  .cl-topbar { margin-bottom: 36px; }
+  .cl-topbar-link { padding: 7px 12px; font-size: 12.5px; }
   .cl-feature { padding: 16px; }
 }
 `;
