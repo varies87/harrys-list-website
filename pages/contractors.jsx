@@ -128,6 +128,7 @@ function ContractorHero() {
 
       <section className="cl-hero">
         <div className="cl-hero-inner">
+          <a href="/" className="cl-wordmark">Harry's List</a>
           {foundingActive && (
             <div className="cl-founding-strip">
               <span className="cl-founding-strip-badge">★ First Fifty</span>
@@ -231,6 +232,11 @@ const CONTRACTOR_LANDING_STYLES = `
   text-align: center;
 }
 .cl-hero-inner { max-width: 620px; margin: 0 auto; }
+.cl-wordmark {
+  display: inline-block; font-family: var(--cl-serif); font-size: 22px; font-weight: 600;
+  letter-spacing: 0.01em; color: #FDFBF6; text-decoration: none; margin-bottom: 28px;
+}
+.cl-wordmark:hover { color: #fff; }
 .cl-eyebrow {
   display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--cl-gold); margin-bottom: 16px;
