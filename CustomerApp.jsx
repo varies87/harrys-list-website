@@ -1133,24 +1133,6 @@ function ContractorAuth({ onSignedUp, onSignedIn }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
-  // "Founding 50" acquisition offer. Reads the live remaining-spots count from
-  // the backend and only shows while spots remain -- when the 50th founder is
-  // approved this returns 0 and the banner disappears on its own, no redeploy.
-  // On any fetch failure we leave it null, so the banner simply doesn't show
-  // rather than displaying a broken or misleading offer.
-  const [foundingSpots, setFoundingSpots] = useState(null);
-  useEffect(() => {
-    let cancelled = false;
-    apiCall("contractors", { action: "foundingStatus" })
-      .then((res) => {
-        if (!cancelled) setFoundingSpots(typeof res?.spotsLeft === "number" ? res.spotsLeft : null);
-      })
-      .catch(() => {
-        if (!cancelled) setFoundingSpots(null);
-      });
-    return () => { cancelled = true; };
-  }, []);
-
   const canSubmitSignUp = email.trim().includes("@") && password.length >= 8;
   const canSubmitSignIn = email.trim().includes("@") && password.length > 0;
 
@@ -1223,18 +1205,6 @@ function ContractorAuth({ onSignedUp, onSignedIn }) {
 
   return (
     <div className="ph-auth-card">
-      {foundingSpots > 0 && (
-        <div className="ph-founding-offer">
-          <span className="ph-founding-offer-badge">★ First Fifty</span>
-          <div className="ph-founding-offer-body">
-            <strong>Your first job's platform fee is on us.</strong>
-            <span>
-              You're one of the first 50 contractors on Harry's List — your first completed
-              job's platform fee is waived, plus a permanent Founding Member badge.
-            </span>
-          </div>
-        </div>
-      )}
       <div className="ph-auth-mode-switch">
         <button type="button" className={mode === "signin" ? "is-active" : ""} onClick={() => { setMode("signin"); setError(null); }}>
           Sign in
