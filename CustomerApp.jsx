@@ -342,7 +342,15 @@ function ContractorCard({ contractor, selected, onToggleSelect, onViewProfile, i
             ? latestWithText.text.slice(0, 110).replace(/\s\S*$/, "") + "…"
             : latestWithText.text;
         return (
-          <p className="ph-card-review">“{snippet}” <span className="ph-card-review-tag">— verified customer</span></p>
+          <p
+            className="ph-card-review is-clickable"
+            role="button"
+            tabIndex={0}
+            onClick={() => onViewProfile(contractor)}
+            onKeyDown={activateOnKey(() => onViewProfile(contractor))}
+          >
+            “{snippet}” <span className="ph-card-review-tag">— verified customer</span>
+          </p>
         );
       })()}
 
@@ -467,6 +475,24 @@ function ContractorProfileModal({ contractor, onClose, currentHomeowner, onToggl
                 </>
               );
             })()}
+          </div>
+        )}
+
+        {/* Reviews — show the actual words, not just the count. This is the
+            view people land on from a card, and the quotes are what convince. */}
+        {contractor.reviews.some((r) => r.text && r.text.trim()) && (
+          <div className="ph-profile-reviews">
+            {contractor.reviews
+              .filter((r) => r.text && r.text.trim())
+              .map((r) => (
+                <div className="ph-profile-review" key={r.id}>
+                  <Stars value={r.rating} />
+                  <p className="ph-profile-review-text">“{r.text}”</p>
+                  <div className="ph-profile-review-date">
+                    Verified homeowner · {new Date(r.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                  </div>
+                </div>
+              ))}
           </div>
         )}
 
@@ -5293,6 +5319,8 @@ const CUSTOMER_STYLES = `
   min-height: 46px;
 }
 .ph-card-review-tag { font-style: normal; font-size: 11.5px; color: var(--ph-taupe-soft); white-space: nowrap; }
+.ph-card-review.is-clickable { cursor: pointer; transition: color 0.12s ease; }
+.ph-card-review.is-clickable:hover { color: var(--ph-ink); }
 .ph-review-author { font-size: 12px; color: var(--ph-taupe-soft); }
 .ph-muted { color: var(--ph-taupe-soft); }
 .ph-muted.small { font-size: 12px; }
@@ -5557,6 +5585,11 @@ const CUSTOMER_STYLES = `
 .ph-profile-stat-value { font-size: 13.5px; color: var(--ph-ink); font-weight: 500; }
 
 .ph-profile-reviews-summary { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+.ph-profile-reviews { margin: -6px 0 20px; }
+.ph-profile-review { padding: 12px 0; border-top: 1px solid var(--ph-sand-line); }
+.ph-profile-review:first-child { border-top: none; padding-top: 0; }
+.ph-profile-review-text { font-size: 13.5px; color: var(--ph-ink-soft); line-height: 1.55; margin: 6px 0 4px; }
+.ph-profile-review-date { font-size: 11.5px; color: var(--ph-taupe-soft); }
 
 .ph-profile-card-actions { display: flex; gap: 10px; align-items: center; padding-top: 20px; border-top: 1px solid var(--ph-sand-line); }
 
