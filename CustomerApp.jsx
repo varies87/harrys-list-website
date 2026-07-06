@@ -539,9 +539,10 @@ function QuoteRequestModal({ contractors, onClose, onSubmit, defaultZip }) {
   const canSubmit = description.trim().length > 0 && contractors.length > 0 && !uploadingPhotos;
 
   const processImage = (file) => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Couldn't read one of the photos. If it's an iPhone HEIC, upload a JPEG or add it from your phone.")); };
       img.onload = () => {
         URL.revokeObjectURL(url);
         const MAX_BYTES = 2.5 * 1024 * 1024;
@@ -593,8 +594,8 @@ function QuoteRequestModal({ contractors, onClose, onSubmit, defaultZip }) {
         ...prev,
         ...processed.map((p, i) => ({ ...p, fileName: files[i].name.replace(/\.[^.]+$/, ".jpg") })),
       ]);
-    } catch {
-      setPhotoError("Could not process one or more photos.");
+    } catch (err) {
+      setPhotoError(err.message || "Could not process one or more photos.");
     } finally {
       setUploadingPhotos(false);
       e.target.value = "";
@@ -657,7 +658,7 @@ function QuoteRequestModal({ contractors, onClose, onSubmit, defaultZip }) {
             <label style={{ cursor: uploadingPhotos ? "not-allowed" : "pointer" }}>
               <input
                 type="file"
-                accept="image/png,image/jpeg,image/webp"
+                accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
                 multiple
                 style={{ display: "none" }}
                 onChange={handlePhotoChange}
@@ -2563,6 +2564,10 @@ function ContractorOnboarding({ onCreate, onEdit, editingContractor }) {
     }
     const img = new Image();
     const url = URL.createObjectURL(file);
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      setSubmitError("This browser couldn't read that image. If it's an iPhone HEIC photo, upload a JPEG/PNG or add it from your phone.");
+    };
     img.onload = () => {
       URL.revokeObjectURL(url);
       // Draw onto white canvas so dark/transparent logos look clean on any background
@@ -2683,7 +2688,7 @@ function ContractorOnboarding({ onCreate, onEdit, editingContractor }) {
 
       <label className="ph-field">
         <span>Logo {isEditing ? "(leave blank to keep your current logo)" : "(optional)"}</span>
-        <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoPick} />
+        <input type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif" onChange={handleLogoPick} />
         {logoFile ? (
           <div className="ph-logo-preview">
             <img src={logoFile.previewUrl} alt="Logo preview" />
@@ -4111,9 +4116,10 @@ function ContractorPortfolio({ contractor }) {
   const THUMB_WIDTH = 400;
 
   const processImage = (file) => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Couldn't read that photo. If it's an iPhone HEIC, upload a JPEG or add it from your phone.")); };
       img.onload = () => {
         URL.revokeObjectURL(url);
         const MAX_BYTES = 2.5 * 1024 * 1024;
@@ -4210,7 +4216,7 @@ function ContractorPortfolio({ contractor }) {
         <label className={`cd-btn cd-btn-primary ${uploading ? "cd-btn-disabled" : ""}`} style={{ cursor: uploading ? "not-allowed" : "pointer" }}>
           <input
             type="file"
-            accept="image/png,image/jpeg,image/webp"
+            accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
             multiple
             style={{ display: "none" }}
             onChange={handleFileChange}
