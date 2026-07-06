@@ -22,6 +22,19 @@ export default function HomePage({ contractors }) {
     return () => { cancelled = true; };
   }, []);
 
+  // Arriving via "/#directory" (e.g. "Back to directory" from a profile page).
+  // The directory is a client-only section that mounts after hydration, so the
+  // browser's native hash jump fires before it exists. Scroll it into view once
+  // it's had a chance to paint -- two passes to cover a slow mount.
+  useEffect(() => {
+    if (typeof window === "undefined" || window.location.hash !== "#directory") return;
+    const scrollToDir = () =>
+      document.getElementById("directory")?.scrollIntoView({ behavior: "auto" });
+    const t1 = setTimeout(scrollToDir, 150);
+    const t2 = setTimeout(scrollToDir, 600);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+
   return (
     <>
       <Head>
