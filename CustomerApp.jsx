@@ -658,7 +658,7 @@ function QuoteRequestModal({ contractors, onClose, onSubmit, defaultZip }) {
             <label style={{ cursor: uploadingPhotos ? "not-allowed" : "pointer" }}>
               <input
                 type="file"
-                accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
+                accept="image/png,image/jpeg,image/webp"
                 multiple
                 style={{ display: "none" }}
                 onChange={handlePhotoChange}
@@ -2688,7 +2688,7 @@ function ContractorOnboarding({ onCreate, onEdit, editingContractor }) {
 
       <label className="ph-field">
         <span>Logo {isEditing ? "(leave blank to keep your current logo)" : "(optional)"}</span>
-        <input type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif" onChange={handleLogoPick} />
+        <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoPick} />
         {logoFile ? (
           <div className="ph-logo-preview">
             <img src={logoFile.previewUrl} alt="Logo preview" />
@@ -4216,7 +4216,7 @@ function ContractorPortfolio({ contractor }) {
         <label className={`cd-btn cd-btn-primary ${uploading ? "cd-btn-disabled" : ""}`} style={{ cursor: uploading ? "not-allowed" : "pointer" }}>
           <input
             type="file"
-            accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
+            accept="image/png,image/jpeg,image/webp"
             multiple
             style={{ display: "none" }}
             onChange={handleFileChange}
