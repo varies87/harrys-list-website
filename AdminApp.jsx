@@ -2,6 +2,72 @@ import React, { useState, useEffect } from "react";
 import { apiCall, normalizeContractor, describeServiceArea } from "./shared.js";
 
 // ---------------------------------------------------------------------------
+// Client-side image processing for admin uploads. Mirrors the contractor app:
+// logo -> 200x200 white-background PNG; photo -> compressed JPEG + thumbnail.
+// accept excludes HEIC on the inputs so iOS converts to JPEG before we see it.
+// Both reject on a bad decode instead of failing silently.
+// ---------------------------------------------------------------------------
+function processAdminLogo(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Couldn't read that image. Use a JPEG or PNG.")); };
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const size = 200;
+      const canvas = document.createElement("canvas");
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, size, size);
+      const pad = 12;
+      const scale = Math.min((size - pad * 2) / img.width, (size - pad * 2) / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      const dataUrl = canvas.toDataURL("image/png");
+      resolve({ base64: dataUrl.split(",")[1], fileName: (file.name || "logo").replace(/\.[^.]+$/, "") + ".png", contentType: "image/png" });
+    };
+    img.src = url;
+  });
+}
+
+function processAdminPhoto(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Couldn't read that photo. Use a JPEG or PNG.")); };
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const MAX_BYTES = 2.5 * 1024 * 1024;
+      const THUMB_WIDTH = 400;
+      const fullCanvas = document.createElement("canvas");
+      let { width, height } = img;
+      if (file.size > MAX_BYTES) {
+        const s = Math.sqrt(MAX_BYTES / file.size) * 0.9;
+        width = Math.round(width * s); height = Math.round(height * s);
+      }
+      fullCanvas.width = width; fullCanvas.height = height;
+      fullCanvas.getContext("2d").drawImage(img, 0, 0, width, height);
+      const thumbCanvas = document.createElement("canvas");
+      const ts = Math.min(1, THUMB_WIDTH / img.naturalWidth);
+      thumbCanvas.width = Math.round(img.naturalWidth * ts);
+      thumbCanvas.height = Math.round(img.naturalHeight * ts);
+      thumbCanvas.getContext("2d").drawImage(img, 0, 0, thumbCanvas.width, thumbCanvas.height);
+      const tryQ = (q) => {
+        const dataUrl = fullCanvas.toDataURL("image/jpeg", q);
+        const base64 = dataUrl.split(",")[1];
+        const bytes = Math.round((base64.length * 3) / 4);
+        if (bytes <= MAX_BYTES || q <= 0.4) {
+          resolve({ base64, thumbnailBase64: thumbCanvas.toDataURL("image/jpeg", 0.75).split(",")[1], contentType: "image/jpeg" });
+        } else { tryQ(Math.max(q - 0.1, 0.4)); }
+      };
+      tryQ(0.85);
+    };
+    img.src = url;
+  });
+}
+
+// ---------------------------------------------------------------------------
 // AdminApp.jsx
 // ---------------------------------------------------------------------------
 // A genuinely separate experience from the customer-facing site: different
@@ -68,7 +134,7 @@ function AdminSignIn({ onAuthed, error, loading }) {
 // ---------------------------------------------------------------------------
 // One row in the approval queue
 // ---------------------------------------------------------------------------
-function QueueRow({ contractor, onApprove, onReject, onArchive, busy }) {
+function QueueRow({ contractor, onApprove, onReject, onArchive, onEdit, busy }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -125,6 +191,15 @@ function QueueRow({ contractor, onApprove, onReject, onArchive, busy }) {
             </div>
           </div>
           <div className="ad-row-actions">
+            {onEdit && (
+              <button
+                type="button"
+                className="ad-btn ad-btn-ghost"
+                onClick={() => onEdit(contractor)}
+              >
+                Edit
+              </button>
+            )}
             <button
               type="button"
               className="ad-btn ad-btn-reject"
@@ -356,6 +431,165 @@ function DisputeRow({ dispute }) {
 // ---------------------------------------------------------------------------
 // Main console
 // ---------------------------------------------------------------------------
+// Admin-side editor: edit a contractor's profile, logo, and portfolio photos
+// on their behalf. Gated by the admin password already held by the console.
+function AdminEditContractor({ contractor, password, onClose, onSaved }) {
+  const [businessName, setBusinessName] = useState(contractor.businessName || "");
+  const [bio, setBio] = useState(contractor.bio || "");
+  const [years, setYears] = useState(contractor.yearsInBusiness || "");
+  const [license, setLicense] = useState(contractor.licenseInfo || "");
+  const [logoUrl, setLogoUrl] = useState(contractor.logoUrl || null);
+  const [photos, setPhotos] = useState([]);
+  const [loadingPhotos, setLoadingPhotos] = useState(true);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [busyPhotoId, setBusyPhotoId] = useState(null);
+  const [err, setErr] = useState(null);
+  const [notice, setNotice] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiCall("contractors", { action: "listPortfolioPhotos", contractorId: contractor.id })
+      .then((d) => { if (!cancelled) setPhotos(d.photos || []); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoadingPhotos(false); });
+    return () => { cancelled = true; };
+  }, [contractor.id]);
+
+  const flash = (m) => { setErr(null); setNotice(m); setTimeout(() => setNotice(null), 2500); };
+
+  const saveProfile = async () => {
+    setSavingProfile(true); setErr(null); setNotice(null);
+    try {
+      const d = await apiCall("contractors", {
+        action: "adminUpdateContractor",
+        adminPassword: password,
+        contractorId: contractor.id,
+        updates: { businessName, bio, yearsInBusiness: Number(years) || 0, licenseInfo: license },
+      });
+      onSaved && onSaved(d.contractor);
+      flash("Profile saved.");
+    } catch (e) { setErr(e.message); } finally { setSavingProfile(false); }
+  };
+
+  const onLogoPick = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploadingLogo(true); setErr(null);
+    try {
+      const { base64, fileName, contentType } = await processAdminLogo(file);
+      const d = await apiCall("contractors", {
+        action: "adminUploadLogo", adminPassword: password, contractorId: contractor.id,
+        fileBase64: base64, fileName, contentType,
+      });
+      setLogoUrl(d.contractor.logoUrl);
+      onSaved && onSaved(d.contractor);
+      flash("Logo updated.");
+    } catch (e2) { setErr(e2.message); } finally { setUploadingLogo(false); }
+  };
+
+  const onPhotosPick = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    setUploadingPhotos(true); setErr(null);
+    try {
+      for (const file of files) {
+        const { base64, thumbnailBase64, contentType } = await processAdminPhoto(file);
+        const d = await apiCall("contractors", {
+          action: "adminUploadPortfolioPhoto", adminPassword: password, contractorId: contractor.id,
+          fileBase64: base64, thumbnailBase64, contentType,
+          fileName: (file.name || "photo").replace(/\.[^.]+$/, "") + ".jpg",
+        });
+        setPhotos((prev) => [d.photo, ...prev]);
+      }
+      flash("Photos added.");
+    } catch (e2) { setErr(e2.message); } finally { setUploadingPhotos(false); }
+  };
+
+  const deletePhoto = async (photoId) => {
+    setBusyPhotoId(photoId); setErr(null);
+    try {
+      await apiCall("contractors", { action: "adminDeletePortfolioPhoto", adminPassword: password, photoId });
+      setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+    } catch (e) { setErr(e.message); } finally { setBusyPhotoId(null); }
+  };
+
+  return (
+    <div className="ad-edit-overlay" onClick={onClose}>
+      <div className="ad-edit-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="ad-edit-head">
+          <div className="ad-edit-title">Edit contractor</div>
+          <button type="button" className="ad-edit-close" onClick={onClose} aria-label="Close">×</button>
+        </div>
+
+        {err && <div className="ad-edit-error">{err}</div>}
+        {notice && <div className="ad-edit-notice">{notice}</div>}
+
+        <div className="ad-edit-section">
+          <div className="ad-edit-section-title">Logo</div>
+          <div className="ad-edit-logo-row">
+            <div className="ad-edit-logo-preview">
+              {logoUrl ? <img src={logoUrl} alt="Logo" /> : <span>{(businessName || "??").slice(0, 2).toUpperCase()}</span>}
+            </div>
+            <label className={`ad-btn ad-btn-ghost ${uploadingLogo ? "is-busy" : ""}`}>
+              <input type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={onLogoPick} disabled={uploadingLogo} />
+              {uploadingLogo ? "Uploading…" : logoUrl ? "Replace logo" : "Upload logo"}
+            </label>
+          </div>
+        </div>
+
+        <div className="ad-edit-section">
+          <div className="ad-edit-section-title">Profile</div>
+          <label className="ad-field"><span>Business name</span>
+            <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
+          </label>
+          <label className="ad-field"><span>Bio</span>
+            <textarea className="ad-edit-textarea" rows={4} value={bio} onChange={(e) => setBio(e.target.value)} placeholder="What they do and what makes their work stand out." />
+          </label>
+          <div className="ad-edit-field-row">
+            <label className="ad-field"><span>Years in business</span>
+              <input value={years} onChange={(e) => setYears(e.target.value)} />
+            </label>
+            <label className="ad-field"><span>License / insurance</span>
+              <input value={license} onChange={(e) => setLicense(e.target.value)} />
+            </label>
+          </div>
+          <button type="button" className="ad-btn ad-btn-primary" disabled={savingProfile} onClick={saveProfile}>
+            {savingProfile ? "Saving…" : "Save profile"}
+          </button>
+        </div>
+
+        <div className="ad-edit-section">
+          <div className="ad-edit-section-title">
+            <span>Portfolio photos</span>
+            <label className={`ad-btn ad-btn-ghost ad-edit-add ${uploadingPhotos ? "is-busy" : ""}`}>
+              <input type="file" accept="image/png,image/jpeg,image/webp" multiple style={{ display: "none" }} onChange={onPhotosPick} disabled={uploadingPhotos} />
+              {uploadingPhotos ? "Uploading…" : "+ Add photos"}
+            </label>
+          </div>
+          {loadingPhotos ? (
+            <div className="ad-edit-muted">Loading photos…</div>
+          ) : photos.length === 0 ? (
+            <div className="ad-edit-muted">No portfolio photos yet.</div>
+          ) : (
+            <div className="ad-edit-photo-grid">
+              {photos.map((p) => (
+                <div className="ad-edit-photo" key={p.id}>
+                  <img src={p.thumbnailUrl || p.publicUrl} alt={p.caption || "Portfolio photo"} />
+                  <button type="button" className="ad-edit-photo-del" disabled={busyPhotoId === p.id} onClick={() => deletePhoto(p.id)} aria-label="Delete photo">×</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdminConsole({ password, onLogout }) {
   const [activeTab, setActiveTab] = useState("metrics");
   const [pending, setPending] = useState([]);
@@ -489,6 +723,24 @@ function AdminConsole({ password, onLogout }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
+
+  const [editingContractor, setEditingContractor] = useState(null);
+
+  // Reflect an admin edit back into whichever list holds this contractor,
+  // patching only the fields the editor can change (keeps derived fields intact).
+  const applyContractorUpdate = (updated) => {
+    if (!updated) return;
+    const fields = ["businessName", "bio", "yearsInBusiness", "licenseInfo", "logoUrl"];
+    const patch = (list) => list.map((c) => {
+      if (c.id !== updated.id) return c;
+      const merged = { ...c };
+      for (const f of fields) if (updated[f] !== undefined) merged[f] = updated[f];
+      return merged;
+    });
+    setPending(patch);
+    setActive(patch);
+    setArchived(patch);
+  };
 
   const handleDecision = async (contractorId, status) => {
     setBusyId(contractorId);
@@ -782,6 +1034,7 @@ function AdminConsole({ password, onLogout }) {
                     onApprove={(id) => handleDecision(id, "approved")}
                     onReject={(id) => handleDecision(id, "rejected")}
                     onArchive={(id) => handleDecision(id, "archived")}
+                    onEdit={setEditingContractor}
                     busy={busyId === c.id}
                   />
                 ))}
@@ -942,6 +1195,7 @@ function AdminConsole({ password, onLogout }) {
                       handleDecision(id, "archived");
                       setActive((prev) => prev.filter((x) => x.id !== id));
                     }}
+                    onEdit={setEditingContractor}
                     busy={busyId === c.id}
                   />
                 ))}
@@ -975,6 +1229,7 @@ function AdminConsole({ password, onLogout }) {
                     contractor={c}
                     onApprove={(id) => handleDecision(id, "approved")}
                     onReject={(id) => handleDecision(id, "rejected")}
+                    onEdit={setEditingContractor}
                     busy={busyId === c.id}
                   />
                 ))}
@@ -984,6 +1239,15 @@ function AdminConsole({ password, onLogout }) {
         )}
 
       </main>
+
+      {editingContractor && (
+        <AdminEditContractor
+          contractor={editingContractor}
+          password={password}
+          onClose={() => setEditingContractor(null)}
+          onSaved={applyContractorUpdate}
+        />
+      )}
 
       <style>{ADMIN_STYLES}</style>
     </div>
@@ -1080,6 +1344,39 @@ const ADMIN_STYLES = `
 .ad-btn-warn { background: transparent; color: #f0c060; border: 1px solid rgba(240,192,96,0.4); }
 .ad-btn-warn:hover:not(:disabled) { background: rgba(240,192,96,0.1); }
 .ad-btn-warn-active { background: rgba(240,192,96,0.18); color: #f0c060; border: 1px solid rgba(240,192,96,0.5); }
+.ad-btn.is-busy { opacity: 0.6; pointer-events: none; }
+
+/* Admin edit modal */
+.ad-edit-overlay { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,0.62); display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 40px 16px; }
+.ad-edit-modal { background: #1d2024; border: 1px solid #2b2f35; border-radius: 14px; width: 100%; max-width: 560px; padding: 22px 22px 26px; box-sizing: border-box; }
+.ad-edit-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.ad-edit-title { font-size: 17px; font-weight: 700; color: #e4e7eb; }
+.ad-edit-close { background: none; border: none; color: #8b929d; font-size: 24px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.ad-edit-close:hover { color: #e4e7eb; }
+.ad-edit-error { background: rgba(239,83,80,0.12); color: #ff8a80; border: 1px solid rgba(239,83,80,0.3); border-radius: 8px; padding: 9px 12px; font-size: 13px; margin-bottom: 14px; }
+.ad-edit-notice { background: rgba(46,160,67,0.12); color: #6ee787; border: 1px solid rgba(46,160,67,0.3); border-radius: 8px; padding: 9px 12px; font-size: 13px; margin-bottom: 14px; }
+.ad-edit-section { border-top: 1px solid #23262b; padding-top: 16px; margin-top: 16px; }
+.ad-edit-section:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+.ad-edit-section-title { font-size: 12px; font-weight: 700; color: #9aa1ab; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ad-edit-add { text-transform: none; letter-spacing: 0; padding: 6px 12px; }
+.ad-edit-logo-row { display: flex; align-items: center; gap: 16px; }
+.ad-edit-logo-preview { width: 64px; height: 64px; border-radius: 12px; background: #15171a; border: 1px solid #33383f; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; font-weight: 700; color: #8b929d; }
+.ad-edit-logo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.ad-edit-textarea { font-family: inherit; font-size: 14px; padding: 11px 13px; border-radius: 8px; border: 1px solid #33383f; background: #15171a; color: #e4e7eb; resize: vertical; line-height: 1.5; box-sizing: border-box; width: 100%; }
+.ad-edit-textarea:focus { outline: 2px solid #5b8def; outline-offset: 1px; border-color: #5b8def; }
+.ad-edit-field-row { display: flex; gap: 12px; }
+.ad-edit-field-row .ad-field { flex: 1; }
+.ad-edit-muted { font-size: 13px; color: #8b929d; padding: 4px 0; }
+.ad-edit-photo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ad-edit-photo { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 1px solid #33383f; }
+.ad-edit-photo img { width: 100%; height: 100%; object-fit: cover; }
+.ad-edit-photo-del { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; border: none; background: rgba(0,0,0,0.65); color: #fff; font-size: 15px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.ad-edit-photo-del:hover { background: rgba(239,83,80,0.9); }
+.ad-edit-photo-del:disabled { opacity: 0.5; cursor: not-allowed; }
+@media (max-width: 520px) {
+  .ad-edit-photo-grid { grid-template-columns: repeat(3, 1fr); }
+  .ad-edit-field-row { flex-direction: column; gap: 0; }
+}
 
 /* Tab bar */
 .ad-tabbar {
