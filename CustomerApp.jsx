@@ -277,7 +277,9 @@ function ContractorCard({ contractor, selected, onToggleSelect, onViewProfile, i
       <div className="ph-card-top">
         <div className="ph-card-id">
           {contractor.logoUrl ? (
-            <img className="ph-avatar ph-avatar-img" src={contractor.logoUrl} alt={`${contractor.businessName} logo`} style={{ background: "#fff" }} />
+            <div className="ph-avatar ph-avatar-logo">
+              <img src={contractor.logoUrl} alt={`${contractor.businessName} logo`} />
+            </div>
           ) : (
             <div className="ph-avatar">{initials(contractor.businessName)}</div>
           )}
@@ -5123,6 +5125,11 @@ const CUSTOMER_STYLES = `
 .ph-avatar.lg { width: 56px; height: 56px; font-size: 18px; border-radius: 13px; }
 /* Bigger logo on the directory cards (both uploaded logos and initials fallback) */
 .ph-card-id .ph-avatar { width: 72px; height: 72px; border-radius: 16px; font-size: 22px; }
+/* Zoom the logo to fill the box: the white-background step bakes ~6% padding
+   around each logo, so scaling ~1.14x crops that margin and the mark goes
+   edge to edge. Works on already-uploaded logos without re-processing. */
+.ph-avatar-logo { overflow: hidden; background: #fff; padding: 0; }
+.ph-avatar-logo img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.14); display: block; }
 .ph-card-name {
   background: none; border: none; padding: 0; font-size: 15px; font-weight: 700;
   color: var(--ph-ink); text-align: left; cursor: pointer; font-family: var(--ph-serif);
