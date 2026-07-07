@@ -428,7 +428,9 @@ function ContractorProfileModal({ contractor, onClose, currentHomeowner, onToggl
         {/* Header */}
         <div className="ph-modal-head">
           {contractor.logoUrl ? (
-            <img className="ph-avatar lg ph-avatar-img" src={contractor.logoUrl} alt={`${contractor.businessName} logo`} style={{ background: "#fff" }} />
+            <div className="ph-avatar lg ph-avatar-logo">
+              <img src={contractor.logoUrl} alt={`${contractor.businessName} logo`} />
+            </div>
           ) : (
             <div className="ph-avatar lg">{initials(contractor.businessName)}</div>
           )}
@@ -5169,7 +5171,7 @@ const CUSTOMER_STYLES = `
   font-weight: 700; font-size: 13px; flex-shrink: 0;
   font-family: var(--ph-serif);
 }
-.ph-avatar.lg { width: 56px; height: 56px; font-size: 18px; border-radius: 13px; }
+.ph-avatar.lg { width: 72px; height: 72px; font-size: 22px; border-radius: 15px; }
 /* Bigger logo on the directory cards (both uploaded logos and initials fallback) */
 .ph-card-id .ph-avatar { width: 72px; height: 72px; border-radius: 16px; font-size: 22px; }
 /* Zoom the logo to fill the box: the white-background step bakes ~6% padding
