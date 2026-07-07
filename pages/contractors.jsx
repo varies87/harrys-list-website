@@ -150,7 +150,7 @@ function ContractorHero() {
             only after a homeowner confirms the job is done.
           </p>
           <a href="#portal" className="cl-btn cl-btn-primary cl-btn-lg" onClick={scrollToPortal}>
-            {foundingActive ? "Claim your founding spot →" : "List your business free →"}
+            List your business free →
           </a>
         </div>
       </section>
