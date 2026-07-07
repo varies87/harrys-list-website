@@ -5161,7 +5161,7 @@ const CUSTOMER_STYLES = `
 .ph-card.is-selected { border-color: var(--ph-clay); box-shadow: 0 0 0 2px var(--ph-clay-tint), var(--ph-shadow-md); }
 
 .ph-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
-.ph-card-id { display: flex; flex-direction: column; align-items: stretch; gap: 10px; flex: 1; min-width: 0; }
+.ph-card-id { display: flex; gap: 12px; align-items: flex-start; }
 .ph-avatar {
   width: 42px; height: 42px; border-radius: 10px;
   background: var(--ph-ink);
@@ -5171,9 +5171,9 @@ const CUSTOMER_STYLES = `
   font-weight: 700; font-size: 13px; flex-shrink: 0;
   font-family: var(--ph-serif);
 }
-.ph-avatar.lg { width: 92px; height: 92px; font-size: 28px; border-radius: 18px; }
+.ph-avatar.lg { width: 120px; height: 120px; font-size: 34px; border-radius: 22px; }
 /* Bigger logo on the directory cards (both uploaded logos and initials fallback) */
-.ph-card-id .ph-avatar { width: 120px; height: 120px; border-radius: 20px; font-size: 30px; }
+.ph-card-id .ph-avatar { width: 72px; height: 72px; border-radius: 16px; font-size: 22px; }
 /* Zoom the logo to fill the box: the white-background step bakes ~6% padding
    around each logo, so scaling ~1.14x crops that margin and the mark goes
    edge to edge. Works on already-uploaded logos without re-processing. */
@@ -5183,7 +5183,6 @@ const CUSTOMER_STYLES = `
 .ph-card-name {
   background: none; border: none; padding: 0; font-size: 15px; font-weight: 700;
   color: var(--ph-ink); text-align: left; cursor: pointer; font-family: var(--ph-serif);
-  white-space: normal; word-break: break-word;
   text-decoration: underline; text-decoration-color: transparent; text-decoration-thickness: 1.5px;
   transition: text-decoration-color 0.15s ease;
 }
