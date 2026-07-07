@@ -2570,42 +2570,75 @@ function ContractorOnboarding({ onCreate, onEdit, editingContractor }) {
 
   const canSubmit = businessName.trim() && bio.trim() && resolveSelection(serviceArea).size > 0 && !submitting;
 
+  // Load a decoded <img> onto a 200px white-background canvas and stage it as a
+  // small PNG. Final step for every logo, whatever the source format was.
+  const stageLogoFromImage = (img) => {
+    const size = 200;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, size, size);
+    const pad = 12;
+    const scale = Math.min((size - pad * 2) / img.width, (size - pad * 2) / img.height);
+    const w = img.width * scale;
+    const h = img.height * scale;
+    ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+    const dataUrl = canvas.toDataURL("image/png");
+    setLogoFile({ base64: dataUrl.split(",")[1], fileName: "logo.png", contentType: "image/png", previewUrl: dataUrl });
+    setSubmitError(null);
+  };
+
+  // Load any Blob/File into an <img>, then stage it. onFail runs if it can't decode.
+  const loadBlobAndStage = (blob, onFail) => {
+    const img = new Image();
+    const u = URL.createObjectURL(blob);
+    img.onload = () => { URL.revokeObjectURL(u); stageLogoFromImage(img); };
+    img.onerror = () => { URL.revokeObjectURL(u); onFail(); };
+    img.src = u;
+  };
+
+  // Lazily pull the HEIC->JPEG converter from CDN, only when we actually hit a
+  // HEIC file -- keeps the library off the normal upload path.
+  const loadHeicConverter = () =>
+    new Promise((resolve, reject) => {
+      if (typeof window !== "undefined" && window.heic2any) return resolve(window.heic2any);
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
+      s.async = true;
+      s.onload = () => (window.heic2any ? resolve(window.heic2any) : reject(new Error("converter unavailable")));
+      s.onerror = () => reject(new Error("converter failed to load"));
+      document.head.appendChild(s);
+    });
+
+  // Convert a (likely HEIC / iPhone) photo to JPEG, then stage it.
+  const convertAndStageLogo = (file) => {
+    setSubmitError("Converting your photo… one sec.");
+    loadHeicConverter()
+      .then((heic2any) => heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 }))
+      .then((out) => {
+        const jpeg = Array.isArray(out) ? out[0] : out;
+        loadBlobAndStage(jpeg, () => setSubmitError("We couldn't read that photo. Please try a different one."));
+      })
+      .catch(() => setSubmitError("We couldn't read that photo. Please try a different one (a screenshot works too)."));
+  };
+
   const handleLogoPick = (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setSubmitError("Logo must be under 5MB.");
+    if (file.size > 20 * 1024 * 1024) {
+      setSubmitError("That image is very large (over 20MB) — please pick a smaller one.");
       return;
     }
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      setSubmitError("This browser couldn't read that image. If it's an iPhone HEIC photo, upload a JPEG/PNG or add it from your phone.");
-    };
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      // Draw onto white canvas so dark/transparent logos look clean on any background
-      const size = 200;
-      const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext("2d");
-      // White background
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, size, size);
-      // Draw logo centered with padding
-      const pad = 12;
-      const scale = Math.min((size - pad * 2) / img.width, (size - pad * 2) / img.height);
-      const w = img.width * scale;
-      const h = img.height * scale;
-      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
-      const dataUrl = canvas.toDataURL("image/png");
-      const base64 = dataUrl.split(",")[1];
-      setLogoFile({ base64, fileName: file.name.replace(/\.[^.]+$/, ".png"), contentType: "image/png", previewUrl: dataUrl });
-      setSubmitError(null);
-    };
-    img.src = url;
+    const isHeic = /\.(heic|heif)$/i.test(file.name) || file.type === "image/heic" || file.type === "image/heif";
+    if (isHeic) {
+      convertAndStageLogo(file);
+      return;
+    }
+    // Normal formats load directly. If the browser still can't decode it (e.g.
+    // an iPhone HEIC that arrived with a .jpg name), fall back to conversion.
+    loadBlobAndStage(file, () => convertAndStageLogo(file));
   };
 
   const handleSubmit = async () => {
@@ -2703,7 +2736,7 @@ function ContractorOnboarding({ onCreate, onEdit, editingContractor }) {
 
       <label className="ph-field">
         <span>Logo {isEditing ? "(leave blank to keep your current logo)" : "(optional)"}</span>
-        <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoPick} />
+        <input type="file" accept="image/*" onChange={handleLogoPick} />
         {logoFile ? (
           <div className="ph-logo-preview">
             <img src={logoFile.previewUrl} alt="Logo preview" />
