@@ -5171,7 +5171,7 @@ const CUSTOMER_STYLES = `
   font-weight: 700; font-size: 13px; flex-shrink: 0;
   font-family: var(--ph-serif);
 }
-.ph-avatar.lg { width: 72px; height: 72px; font-size: 22px; border-radius: 15px; }
+.ph-avatar.lg { width: 92px; height: 92px; font-size: 28px; border-radius: 18px; }
 /* Bigger logo on the directory cards (both uploaded logos and initials fallback) */
 .ph-card-id .ph-avatar { width: 72px; height: 72px; border-radius: 16px; font-size: 22px; }
 /* Zoom the logo to fill the box: the white-background step bakes ~6% padding
@@ -5179,6 +5179,7 @@ const CUSTOMER_STYLES = `
    edge to edge. Works on already-uploaded logos without re-processing. */
 .ph-avatar-logo { overflow: hidden; background: #fff; padding: 0; }
 .ph-avatar-logo img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.14); display: block; }
+.ph-avatar.lg.ph-avatar-logo img { transform: scale(1.32); }
 .ph-card-name {
   background: none; border: none; padding: 0; font-size: 15px; font-weight: 700;
   color: var(--ph-ink); text-align: left; cursor: pointer; font-family: var(--ph-serif);
