@@ -3997,7 +3997,7 @@ export default function CustomerApp() {
             <span className="ph-header-subtitle">DFW Trade Directory</span>
           </div>
         </div>
-        <a href="/contractors" className="ph-contractor-link">Are you a contractor? →</a>
+        <a href="/contractors#portal" className="ph-contractor-link">Are you a contractor? →</a>
       </header>
 
       <main className="ph-main">
