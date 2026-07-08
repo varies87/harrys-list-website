@@ -1,5 +1,6 @@
 import dynamic from "next/dynamic";
 import Head from "next/head";
+import { tradeSlug, citySlug, normalizeContractor, primaryCityForServiceArea } from "../../shared";
 
 const API_BASE_URL = "https://harrys-list-backend.vercel.app/api";
 
@@ -78,7 +79,28 @@ export default function ContractorProfilePage({ contractor }) {
         <p>{contractor.bio}</p>
         {contractor.license_info && <p>License/Insurance: {contractor.license_info}</p>}
         {contractor.years_in_business && <p>{contractor.years_in_business} years in business</p>}
+        {contractor.primary_city && (
+          <p>
+            <a href={`/${tradeSlug(contractor.trade)}/${citySlug(contractor.primary_city)}`}>
+              See other {contractor.trade} contractors in {contractor.primary_city}
+            </a>
+          </p>
+        )}
       </div>
+
+      {/* Visible internal link -- helps homeowners browse sideways to other
+          contractors in the same trade/city, and gives Google a real,
+          visible (not hidden) crawl path into the SEO landing pages. */}
+      {contractor.primary_city && (
+        <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px" }}>
+          <a
+            href={`/${tradeSlug(contractor.trade)}/${citySlug(contractor.primary_city)}`}
+            style={{ fontSize: 13, color: "#6B5840" }}
+          >
+            See other {contractor.trade} contractors in {contractor.primary_city} →
+          </a>
+        </div>
+      )}
 
       <ContractorPublicProfile />
     </>
@@ -100,6 +122,7 @@ export async function getServerSideProps({ params }) {
     const data = await res.json();
     const c = data.contractor;
     if (!c) return { props: { contractor: null } };
+    const normalized = normalizeContractor(c);
     return {
       props: {
         contractor: {
@@ -110,6 +133,7 @@ export async function getServerSideProps({ params }) {
           slug: c.slug || null,
           license_info: c.licenseInfo || null,
           years_in_business: c.yearsInBusiness || null,
+          primary_city: primaryCityForServiceArea(normalized.serviceArea),
         },
       },
     };
