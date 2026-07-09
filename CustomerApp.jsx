@@ -3200,6 +3200,45 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
               </div>
             )}
 
+            {/* Show accepted badge when homeowner accepted the quote -- rendered
+                right after the quote summary, ahead of the invoice action, so a
+                contractor sees "you have their address" (or doesn't) BEFORE
+                they're offered the chance to invoice the job. */}
+            {myStatus === "responded" && !alreadyReported && myRecipient?.homeownerAccepted && (
+              <div style={{ marginBottom: 8 }}>
+                <span className="ph-status-chip responded">✓ Homeowner accepted your quote</span>
+              </div>
+            )}
+
+            {/* Show address + phone when homeowner accepted */}
+            {myRecipient?.homeownerAccepted && (qr.address || qr.homeownerPhone) && (
+              <div style={{ marginTop: 4, marginBottom: 8, background: "var(--ph-green-tint)", border: "1px solid #c7e0c2", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
+                <div style={{ fontWeight: 700, color: "var(--ph-green-text)", marginBottom: 6 }}>📬 Homeowner contact info</div>
+                {qr.address && <div style={{ color: "var(--ph-ink)", marginBottom: 2 }}>📍 {qr.address}</div>}
+                {qr.homeownerPhone && <div style={{ color: "var(--ph-ink)" }}>📞 {qr.homeownerPhone}</div>}
+              </div>
+            )}
+
+            {/* Show address + phone once homeowner marks complete (job confirmed) */}
+            {myRecipient?.homeownerMarkedComplete && (qr.address || qr.homeownerPhone) && (
+              <div style={{ marginTop: 8, background: "var(--ph-green-tint)", border: "1px solid #c7e0c2", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
+                <div style={{ fontWeight: 700, color: "var(--ph-green-text)", marginBottom: 6 }}>✓ Job confirmed — homeowner contact info</div>
+                {qr.address && <div style={{ color: "var(--ph-ink)", marginBottom: 2 }}>📍 {qr.address}</div>}
+                {qr.homeownerPhone && <div style={{ color: "var(--ph-ink)" }}>📞 {qr.homeownerPhone}</div>}
+              </div>
+            )}
+
+            {/* Warn -- don't silently block -- a contractor who's about to invoice
+                a job the homeowner never accepted through the app, since they
+                won't have an in-app-revealed address. Not a hard block: a
+                contractor may legitimately already have the address from an
+                existing customer they brought onto the platform themselves. */}
+            {myStatus === "responded" && !alreadyReported && !myRecipient?.homeownerAccepted && reportingFor !== qr.id && (
+              <div style={{ marginBottom: 8, background: "#FBF1DE", border: "1px solid #EAD7AC", borderRadius: 8, padding: "9px 13px", fontSize: 12.5, color: "#7A5A1A" }}>
+                ⚠ This homeowner hasn't accepted your quote in the app yet, so you don't have their address here. If you already have it from working with them directly, you're fine to continue.
+              </div>
+            )}
+
             {myStatus === "responded" && !alreadyReported && (
               <div className="ph-inbox-actions">
                 {reportingFor === qr.id ? (
@@ -3314,31 +3353,6 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
             {myStatus === "responded" && alreadyReported && (
               <div className="ph-inbox-actions">
                 <span className="ph-status-chip responded">job reported</span>
-              </div>
-            )}
-
-            {/* Show accepted badge when homeowner accepted the quote */}
-            {myStatus === "responded" && !alreadyReported && myRecipient?.homeownerAccepted && (
-              <div style={{ marginBottom: 8 }}>
-                <span className="ph-status-chip responded">✓ Homeowner accepted your quote</span>
-              </div>
-            )}
-
-            {/* Show address + phone when homeowner accepted */}
-            {myRecipient?.homeownerAccepted && (qr.address || qr.homeownerPhone) && (
-              <div style={{ marginTop: 4, marginBottom: 8, background: "var(--ph-green-tint)", border: "1px solid #c7e0c2", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
-                <div style={{ fontWeight: 700, color: "var(--ph-green-text)", marginBottom: 6 }}>📬 Homeowner contact info</div>
-                {qr.address && <div style={{ color: "var(--ph-ink)", marginBottom: 2 }}>📍 {qr.address}</div>}
-                {qr.homeownerPhone && <div style={{ color: "var(--ph-ink)" }}>📞 {qr.homeownerPhone}</div>}
-              </div>
-            )}
-
-            {/* Show address + phone once homeowner marks complete (job confirmed) */}
-            {myRecipient?.homeownerMarkedComplete && (qr.address || qr.homeownerPhone) && (
-              <div style={{ marginTop: 8, background: "var(--ph-green-tint)", border: "1px solid #c7e0c2", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
-                <div style={{ fontWeight: 700, color: "var(--ph-green-text)", marginBottom: 6 }}>✓ Job confirmed — homeowner contact info</div>
-                {qr.address && <div style={{ color: "var(--ph-ink)", marginBottom: 2 }}>📍 {qr.address}</div>}
-                {qr.homeownerPhone && <div style={{ color: "var(--ph-ink)" }}>📞 {qr.homeownerPhone}</div>}
               </div>
             )}
 
