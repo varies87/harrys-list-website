@@ -435,6 +435,7 @@ function DisputeRow({ dispute }) {
 // on their behalf. Gated by the admin password already held by the console.
 function AdminEditContractor({ contractor, password, onClose, onSaved }) {
   const [businessName, setBusinessName] = useState(contractor.businessName || "");
+  const [trade, setTrade] = useState(contractor.trade || "");
   const [bio, setBio] = useState(contractor.bio || "");
   const [years, setYears] = useState(contractor.yearsInBusiness || "");
   const [license, setLicense] = useState(contractor.licenseInfo || "");
@@ -466,7 +467,7 @@ function AdminEditContractor({ contractor, password, onClose, onSaved }) {
         action: "adminUpdateContractor",
         adminPassword: password,
         contractorId: contractor.id,
-        updates: { businessName, bio, yearsInBusiness: Number(years) || 0, licenseInfo: license },
+        updates: { businessName, trade, bio, yearsInBusiness: Number(years) || 0, licenseInfo: license },
       });
       onSaved && onSaved(d.contractor);
       flash("Profile saved.");
@@ -545,6 +546,23 @@ function AdminEditContractor({ contractor, password, onClose, onSaved }) {
           <div className="ad-edit-section-title">Profile</div>
           <label className="ad-field"><span>Business name</span>
             <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
+          </label>
+          <label className="ad-field"><span>Trade / category</span>
+            <select className="ad-edit-select" value={trade} onChange={(e) => setTrade(e.target.value)}>
+              {[
+                { label: "Exterior", trades: ["Roofing", "Fencing", "Gutters & Drainage", "Siding & Exterior", "Windows & Doors", "Painting — Exterior"] },
+                { label: "Landscaping & Outdoor", trades: ["Landscaping & Lawn Care", "Mulch & Hardscape", "Tree Service", "Irrigation & Sprinklers", "Pool & Spa", "Outdoor Lighting", "Concrete & Driveways"] },
+                { label: "Interior", trades: ["Painting — Interior", "Flooring", "Tile & Stonework", "Carpentry & Trim", "Kitchen Remodel", "Bathroom Remodel", "Basement & Additions"] },
+                { label: "Mechanical & Systems", trades: ["HVAC", "Plumbing", "Electrical", "Insulation", "Solar", "Home Automation"] },
+                { label: "Maintenance & Cleaning", trades: ["Pressure Washing", "House Cleaning", "Junk Removal", "Pest Control", "Chimney & Fireplace"] },
+                { label: "Youth & Student Businesses", trades: ["Car Detailing", "Window Cleaning", "Gutter Cleaning", "Holiday Lighting", "Moving Help", "Furniture Assembly", "TV & Electronics Setup", "Garage Organization"] },
+                { label: "General", trades: ["General Contractor", "Handyman"] },
+              ].map(({ label, trades }) => (
+                <optgroup key={label} label={label}>
+                  {trades.map((t) => <option key={t} value={t}>{t}</option>)}
+                </optgroup>
+              ))}
+            </select>
           </label>
           <label className="ad-field"><span>Bio</span>
             <textarea className="ad-edit-textarea" rows={4} value={bio} onChange={(e) => setBio(e.target.value)} placeholder="What they do and what makes their work stand out." />
@@ -1320,10 +1338,15 @@ const ADMIN_STYLES = `
 .ad-field { display: flex; flex-direction: column; gap: 6px; text-align: left; margin-bottom: 18px; }
 .ad-field span { font-size: 12px; font-weight: 600; color: #9aa1ab; text-transform: uppercase; letter-spacing: 0.04em; }
 .ad-field input {
-  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 14px; padding: 11px 13px; border-radius: 8px;
-  border: 1px solid #33383f; background: #15171a; color: #e4e7eb; letter-spacing: 0.06em;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 16px; padding: 11px 13px; border-radius: 8px;
+  border: 1px solid #33383f; background: #15171a; color: #e4e7eb; letter-spacing: 0.06em; width: 100%; box-sizing: border-box;
 }
 .ad-field input:focus { outline: 2px solid #5b8def; outline-offset: 1px; border-color: #5b8def; }
+.ad-edit-select {
+  font-family: inherit; font-size: 16px; padding: 11px 13px; border-radius: 8px;
+  border: 1px solid #33383f; background: #15171a; color: #e4e7eb; width: 100%; box-sizing: border-box; cursor: pointer;
+}
+.ad-edit-select:focus { outline: 2px solid #5b8def; outline-offset: 1px; border-color: #5b8def; }
 
 .ad-btn {
   font-size: 13px; font-weight: 600; border-radius: 8px; padding: 10px 16px; cursor: pointer; border: none;
@@ -1362,7 +1385,7 @@ const ADMIN_STYLES = `
 .ad-edit-logo-row { display: flex; align-items: center; gap: 16px; }
 .ad-edit-logo-preview { width: 64px; height: 64px; border-radius: 12px; background: #15171a; border: 1px solid #33383f; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; font-weight: 700; color: #8b929d; }
 .ad-edit-logo-preview img { width: 100%; height: 100%; object-fit: cover; }
-.ad-edit-textarea { font-family: inherit; font-size: 14px; padding: 11px 13px; border-radius: 8px; border: 1px solid #33383f; background: #15171a; color: #e4e7eb; resize: vertical; line-height: 1.5; box-sizing: border-box; width: 100%; }
+.ad-edit-textarea { font-family: inherit; font-size: 16px; padding: 11px 13px; border-radius: 8px; border: 1px solid #33383f; background: #15171a; color: #e4e7eb; resize: vertical; line-height: 1.5; box-sizing: border-box; width: 100%; }
 .ad-edit-textarea:focus { outline: 2px solid #5b8def; outline-offset: 1px; border-color: #5b8def; }
 .ad-edit-field-row { display: flex; gap: 12px; }
 .ad-edit-field-row .ad-field { flex: 1; }
@@ -1373,15 +1396,28 @@ const ADMIN_STYLES = `
 .ad-edit-photo-del { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; border: none; background: rgba(0,0,0,0.65); color: #fff; font-size: 15px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .ad-edit-photo-del:hover { background: rgba(239,83,80,0.9); }
 .ad-edit-photo-del:disabled { opacity: 0.5; cursor: not-allowed; }
-@media (max-width: 520px) {
+@media (max-width: 640px) {
   .ad-edit-photo-grid { grid-template-columns: repeat(3, 1fr); }
   .ad-edit-field-row { flex-direction: column; gap: 0; }
+  .ad-edit-overlay { padding: 0; align-items: stretch; }
+  .ad-edit-modal { max-width: 100%; min-height: 100vh; border-radius: 0; padding: 18px 16px 24px; }
+  .ad-detail-grid { grid-template-columns: 1fr; gap: 12px; }
+  .ad-row-head { padding: 12px 14px; gap: 10px; }
+  .ad-row-name { flex-wrap: wrap; }
+  .ad-row-meta { flex-wrap: wrap; row-gap: 2px; }
+  .ad-row-time { font-size: 10px; }
+  .ad-row-chevron { width: 26px; height: 26px; }
+  .ad-tab { padding: 13px 13px; font-size: 12.5px; }
+  .ad-row-actions { flex-wrap: wrap; }
 }
 
 /* Tab bar */
 .ad-tabbar {
   display: flex; gap: 0; border-bottom: 1px solid #23262b; background: #1a1d21; padding: 0 20px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
 }
+.ad-tabbar::-webkit-scrollbar { display: none; }
+.ad-tab { flex-shrink: 0; }
 .ad-tab {
   background: none; border: none; color: #8b929d; font-size: 13px; font-weight: 600; padding: 13px 16px;
   cursor: pointer; font-family: inherit; border-bottom: 2px solid transparent; margin-bottom: -1px;
