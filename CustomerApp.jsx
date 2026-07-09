@@ -273,7 +273,13 @@ function ContractorCard({ contractor, selected, onToggleSelect, onViewProfile, i
       : null;
 
   return (
-    <div className={`ph-card ${selected ? "is-selected" : ""}`}>
+    <div
+      className={`ph-card ${selected ? "is-selected" : ""}`}
+      role="button"
+      tabIndex={0}
+      onClick={() => onViewProfile(contractor)}
+      onKeyDown={activateOnKey(() => onViewProfile(contractor))}
+    >
       <div className="ph-card-top">
         <div className="ph-card-id">
           {contractor.logoUrl ? (
@@ -295,7 +301,7 @@ function ContractorCard({ contractor, selected, onToggleSelect, onViewProfile, i
             <button
               type="button"
               className={`ph-favorite-btn ${isFavorite ? "is-favorite" : ""}`}
-              onClick={() => onToggleFavorite(contractor.id)}
+              onClick={(e) => { e.stopPropagation(); onToggleFavorite(contractor.id); }}
               aria-label={isFavorite ? "Remove from favorites" : "Save as favorite"}
               title={isFavorite ? "Remove from favorites" : "Save as favorite"}
             >
@@ -322,9 +328,7 @@ function ContractorCard({ contractor, selected, onToggleSelect, onViewProfile, i
               <Stars value={Math.round(avgRating)} />
               <span className="ph-rating-text">{avgRating.toFixed(1)} ({contractor.reviews.length})</span>
             </>
-          ) : (
-            <span className="ph-rating-text muted">No verified reviews yet</span>
-          )}
+          ) : null}
         </div>
         <div className="ph-thumbs">
           <span className="ph-thumb up">▲ {contractor.thumbsUp}</span>
@@ -361,7 +365,7 @@ function ContractorCard({ contractor, selected, onToggleSelect, onViewProfile, i
         <button
           type="button"
           className={`ph-card-select-btn ${selected ? "is-selected" : ""}`}
-          onClick={() => onToggleSelect(contractor.id)}
+          onClick={(e) => { e.stopPropagation(); onToggleSelect(contractor.id); }}
         >
           {selected ? "✓ Selected for quote" : "Select for quote"}
         </button>
@@ -5171,7 +5175,9 @@ const CUSTOMER_STYLES = `
   box-shadow: var(--ph-shadow-sm);
   transition: box-shadow 0.18s ease, transform 0.18s ease;
 }
+.ph-directory-grid .ph-card { cursor: pointer; }
 .ph-directory-grid .ph-card:hover { box-shadow: var(--ph-shadow-md); transform: translateY(-1px); }
+.ph-directory-grid .ph-card:focus-visible { outline: 2px solid var(--ph-clay); outline-offset: 2px; }
 .ph-card.is-selected { border-color: var(--ph-clay); box-shadow: 0 0 0 2px var(--ph-clay-tint), var(--ph-shadow-md); }
 
 .ph-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
