@@ -5340,7 +5340,7 @@ const CUSTOMER_STYLES = `
   gap: 6px; align-items: center;
 }
 .ph-line-item-desc, .ph-line-item-num {
-  font-family: var(--ph-sans); font-size: 13px; padding: 7px 9px;
+  font-family: var(--ph-sans); font-size: 16px; padding: 7px 9px;
   border: 1.5px solid var(--ph-sand); border-radius: 6px; background: var(--ph-surface);
   color: var(--ph-ink);
 }
@@ -5513,7 +5513,7 @@ const CUSTOMER_STYLES = `
 }
 .ph-low-report-reason {
   font-family: var(--ph-sans);
-  font-size: 13.5px;
+  font-size: 16px;
   padding: 9px 11px;
   border: 1.5px solid #EAD7AC;
   border-radius: var(--ph-radius-sm);
