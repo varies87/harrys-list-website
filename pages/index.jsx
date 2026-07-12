@@ -96,6 +96,7 @@ function LandingHero({ contractorCount }) {
       <style>{LANDING_STYLES}</style>
 
       <section className="hl-hero">
+        <a href="/contractors" className="hl-corner-link">I&rsquo;m a contractor →</a>
         <div className="hl-hero-inner">
           <div className="hl-wordmark">
             <span className="hl-wordmark-name">Harry&rsquo;s List</span>
@@ -109,10 +110,7 @@ function LandingHero({ contractorCount }) {
           </p>
           <div className="hl-cta-row">
             <a href="#directory" className="hl-btn hl-btn-primary hl-btn-lg" onClick={scrollToDirectory}>
-              Find a contractor →
-            </a>
-            <a href="/contractors" className="hl-btn hl-btn-secondary hl-btn-lg">
-              I&rsquo;m a contractor →
+              Create a free account →
             </a>
           </div>
           {contractorCount >= 10 && (
@@ -173,7 +171,14 @@ const LANDING_STYLES = `
   background-image: linear-gradient(165deg, #20342a 0%, var(--hl-ink) 60%);
   color: var(--hl-bg);
   padding: 64px 24px 56px;
+  position: relative;
 }
+.hl-corner-link {
+  position: absolute; top: 20px; right: 24px;
+  font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,0.55); text-decoration: none;
+  padding: 6px 10px; border-radius: 6px; transition: color 0.15s ease, background 0.15s ease;
+}
+.hl-corner-link:hover { color: #FDFBF6; background: rgba(255,255,255,0.08); }
 .hl-hero-inner { max-width: 720px; margin: 0 auto; text-align: center; }
 .hl-eyebrow {
   display: inline-block;
@@ -259,6 +264,7 @@ const LANDING_STYLES = `
 @media (max-width: 760px) {
   .hl-steps { grid-template-columns: 1fr; gap: 24px; }
   .hl-hero { padding: 48px 20px 40px; }
+  .hl-corner-link { top: 14px; right: 16px; font-size: 11.5px; padding: 5px 8px; }
 }
 `;
 
