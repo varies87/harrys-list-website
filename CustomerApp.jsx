@@ -525,8 +525,8 @@ function ContractorProfileModal({ contractor, onClose, currentHomeowner, onToggl
               </button>
             </>
           ) : (
-            <button type="button" className="ph-btn-secondary" onClick={() => onRequireAuth?.()}>
-              Sign in to request a quote or thumbs up this contractor
+            <button type="button" className="ph-btn-primary" onClick={() => onRequireAuth?.()}>
+              Create a free account to request a quote →
             </button>
           )}
         </div>
@@ -987,8 +987,8 @@ function HomeownerCompleteProfile({ onComplete }) {
  * Auth itself only knows about the login credentials, not the homeowner
  * profile fields like name/zip.
  */
-function HomeownerAuth({ onSignedUp, onSignedIn }) {
-  const [mode, setMode] = useState("signin");
+function HomeownerAuth({ onSignedUp, onSignedIn, initialMode }) {
+  const [mode, setMode] = useState(initialMode || "signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [zip, setZip] = useState("");
@@ -1880,11 +1880,17 @@ function HomeownerView({
         // Signed in — open quote modal directly
         setQuoteTargetContractors([target]);
         setShowQuoteModal(true);
+      } else {
+        // Guest clicked "Request a quote" on a public profile page -- without
+        // this, they'd silently land on the plain directory with zero
+        // feedback that anything was supposed to happen. Route them straight
+        // to account creation instead of a dead click.
+        onRequireAuth?.();
       }
       // Whether signed in or not, clean up the URL param
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, [contractors, currentHomeowner]);
+  }, [contractors, currentHomeowner, onRequireAuth]);
 
   const filtered = useMemo(() => {
     return contractors.filter((c) => {
@@ -3596,7 +3602,7 @@ function PaymentsPanel({ contractor, onRefreshJobs, onEditAmount }) {
         <p>
           No pay-per-lead, ever. Browsing the directory, getting found, and receiving quote requests all cost
           nothing. The only thing you ever owe is a small percentage of jobs you actually complete and get paid
-          for — and the rate goes down as the job gets bigger.
+          for.
         </p>
         <div className="ph-fee-table">
           {FEE_BRACKETS.map((b) => (
@@ -3606,9 +3612,18 @@ function PaymentsPanel({ contractor, onRefreshJobs, onEditAmount }) {
             </div>
           ))}
         </div>
+        {/* Worked example, hardcoded to the current FEE_BRACKETS values above
+            ($0-500 @ 4%, $500-2,500 @ 3%) -- update this if those rates ever
+            change. Showing the real math is clearer than any explanation of
+            how the tiers combine -- the numbers speak for themselves. */}
+        <div className="ph-fee-example">
+          <div className="ph-fee-example-title">Example — a $1,500 job:</div>
+          <div className="ph-fee-example-row"><span>First $500</span><span>4% = $20</span></div>
+          <div className="ph-fee-example-row"><span>Next $1,000 (up to $1,500)</span><span>3% = $30</span></div>
+          <div className="ph-fee-example-total"><span>Total fee</span><span>$50</span></div>
+        </div>
         <p className="ph-muted small">
-          Brackets are marginal, like a tax bracket — only the portion of a job inside each range is charged that
-          rate. Payment is due within {PAYMENT_DUE_DAYS} days of the homeowner confirming the job amount.
+          Payment is due within {PAYMENT_DUE_DAYS} days of the homeowner confirming the job amount.
         </p>
       </div>
 
@@ -3779,9 +3794,30 @@ export default function CustomerApp() {
   const [homeownerJobs, setHomeownerJobs] = useState([]);
   const [showWelcome, setShowWelcome] = useState(false);
   const [checkingHomeownerSession, setCheckingHomeownerSession] = useState(true);
-  const [homeownerScreen, setHomeownerScreen] = useState("directory");
+  // Default new/guest visitors straight to account creation rather than the
+  // browse directory -- there aren't many existing homeowner accounts to sign
+  // into yet, and signups are the current priority. A signed-in homeowner
+  // never sees this screen (gated by !currentHomeowner at render time), and
+  // a real returning session is resolved before anything renders, so this
+  // only affects genuinely new/unauthenticated visitors.
+  const [homeownerScreen, setHomeownerScreen] = useState("signin");
   const [loadingContractors, setLoadingContractors] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  // True when the page loads with ?signup=true (an ad's destination link) OR
+  // when a guest clicks anything that requires an account (request a quote,
+  // thumbs up, etc.) -- in both cases we want them to land directly on the
+  // Create Account tab, not the Sign In tab, since these are new prospects
+  // showing real interest, not returning users looking to log back in.
+  const [signupIntent, setSignupIntent] = useState(true);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("signup") === "true") {
+      setSignupIntent(true);
+      setHomeownerScreen("signin");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -4055,9 +4091,9 @@ export default function CustomerApp() {
               <FadeIn keyValue="homeowner-auth">
                 <div className="ph-auth-card">
                   <button type="button" className="ph-link-btn" onClick={() => setHomeownerScreen("directory")}>
-                    ← Back to browsing
+                    Just browsing? See the directory without an account →
                   </button>
-                  <HomeownerAuth onSignedUp={handleHomeownerSignedUp} onSignedIn={handleHomeownerSignedIn} />
+                  <HomeownerAuth onSignedUp={handleHomeownerSignedUp} onSignedIn={handleHomeownerSignedIn} initialMode={signupIntent ? "signup" : "signin"} />
                 </div>
               </FadeIn>
             )}
@@ -4130,7 +4166,7 @@ export default function CustomerApp() {
                       currentHomeowner={currentHomeowner}
                       onToggleFavorite={handleToggleFavorite}
                       onToggleThumbsUp={handleToggleThumbsUp}
-                      onRequireAuth={() => setHomeownerScreen("signin")}
+                      onRequireAuth={() => { setSignupIntent(true); setHomeownerScreen("signin"); }}
                     />
                   )}
                 </div>
@@ -4522,7 +4558,7 @@ function ContractorTutorial({ onClose }) {
     { icon: "ti-inbox", title: "Requests come to you", body: "Homeowners in your area send quote requests straight to you — no pay-per-lead, no bidding wars. You only hear from people who want your work." },
     { icon: "ti-send", title: "Send your quote", body: "Open a request and send your price right in the app. The homeowner's contact details unlock once they accept your quote." },
     { icon: "ti-circle-check", title: "Get the job confirmed", body: "After you finish the work, the homeowner confirms it's done and the final amount. That confirmation is what starts payment — not you chasing an invoice." },
-    { icon: "ti-credit-card", title: "Only pay after you're paid", body: "You keep 96–99% of every job. A small platform fee (1–4%) is owed only after a confirmed job — never up front. And as a founding member, your first job's fee is on us." },
+    { icon: "ti-credit-card", title: "Only pay after you're paid", body: "On a typical $1,500 job, you'd pay just $50 in fees. Never owed until a job is confirmed and paid. And as a founding member, your first job's fee is on us." },
     { icon: "ti-star", title: "Reviews grow your business", body: "Every confirmed job earns a verified review. Real reviews bring more homeowners — and no one can fake or buy their way past you." },
     { icon: "ti-qrcode", title: "Bring your own customers", body: "Share your Harry's List profile or QR code with existing customers to collect reviews and run their jobs through the app too." },
   ];
@@ -5413,6 +5449,19 @@ const CUSTOMER_STYLES = `
 }
 .ph-fee-tier-label { color: var(--ph-taupe); }
 .ph-fee-tier-rate { font-weight: 700; font-family: var(--ph-mono); color: var(--ph-clay-dark); }
+
+.ph-fee-example {
+  background: var(--ph-bg); border: 1px solid var(--ph-sand-line); border-radius: var(--ph-radius-sm);
+  padding: 14px 16px; margin: 14px 0; font-size: 13.5px;
+}
+.ph-fee-example-title { font-weight: 700; color: var(--ph-ink); margin-bottom: 8px; }
+.ph-fee-example-row {
+  display: flex; justify-content: space-between; color: var(--ph-ink-soft); padding: 3px 0; font-family: var(--ph-mono); font-size: 13px;
+}
+.ph-fee-example-total {
+  display: flex; justify-content: space-between; font-weight: 700; color: var(--ph-ink);
+  border-top: 1px solid var(--ph-sand-line); margin-top: 6px; padding-top: 6px; font-family: var(--ph-mono);
+}
 
 .ph-suspended-banner {
   background: var(--ph-red-tint); border: 1px solid #E3BCA8; border-radius: var(--ph-radius-md); padding: 16px 18px; margin-bottom: 22px;
