@@ -36,7 +36,7 @@ async function getAuthToken() {
 // ---------------------------------------------------------------------------
 // Stripe configuration
 // ---------------------------------------------------------------------------
-const STRIPE_PUBLISHABLE_KEY = "pk_test_51TmfZ8Qxv4nGJRt0dM2EqoyknUsH4sEDRMgH7sCWOS04zTe8oixaQN2Ql7pF2X4l8NQRU6NWBrnOBjsOdw70rBH400Sfs5ObZw";
+const STRIPE_PUBLISHABLE_KEY = "pk_live_51TmfYzJFBdoZKAKwcUBCL5DspUPtN3Qux3VMKsMXbCMaHjgaiur8fXcfkKIu5sjM0VMqYI7jv3qoyh7p9xNhhdC100rGNCxNzo";
 const CREATE_PAYMENT_INTENT_URL = "https://harrys-list-backend.vercel.app/api/create-payment-intent";
 const API_BASE_URL = "https://harrys-list-backend.vercel.app/api";
 
