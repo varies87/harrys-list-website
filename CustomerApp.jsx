@@ -4093,6 +4093,27 @@ export default function CustomerApp() {
                   <button type="button" className="ph-link-btn" onClick={() => setHomeownerScreen("directory")}>
                     Just browsing? See the directory without an account →
                   </button>
+
+                  {/* Cold visitors (e.g. from social media) arrive with zero
+                      context or built-up trust -- unlike an ad click (which
+                      already saw trust-building creative) or a phone
+                      conversation. Showing real proof right here, before the
+                      form, gives them a reason to sign up instead of just
+                      seeing a bare name/email/password wall. */}
+                  <div className="ph-auth-trust">
+                    <strong>No pay-per-lead. Ever.</strong>
+                    <span>
+                      Contractors never pay to be listed. They only pay a small percentage after a job is done
+                      and you've confirmed it — real tradespeople, real reviews, nobody buying their way to the
+                      top.
+                    </span>
+                    <div className="ph-auth-trust-review">
+                      <span className="ph-auth-trust-stars">★★★★★</span>
+                      <p>"Harrison and his crew did a great job matching my rock and completing the job quickly!"</p>
+                      <span className="ph-auth-trust-attr">— verified homeowner, Preston Hollow Mulchachos</span>
+                    </div>
+                  </div>
+
                   <HomeownerAuth onSignedUp={handleHomeownerSignedUp} onSignedIn={handleHomeownerSignedIn} initialMode={signupIntent ? "signup" : "signin"} />
                 </div>
               </FadeIn>
@@ -5629,6 +5650,20 @@ const CUSTOMER_STYLES = `
   background: var(--ph-surface); border: 1px solid var(--ph-sand-line); border-radius: var(--ph-radius-lg); padding: 32px; max-width: 460px;
   box-shadow: var(--ph-shadow-md); margin: 48px auto 0; min-height: 420px;
 }
+.ph-auth-trust {
+  background: var(--ph-ink); background-image: linear-gradient(135deg, #233a2d 0%, var(--ph-ink) 100%);
+  color: #FDFBF6; border-radius: var(--ph-radius-md); padding: 16px 18px; margin: 14px 0 22px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.ph-auth-trust strong { font-size: 14px; font-family: var(--ph-serif); }
+.ph-auth-trust > span { font-size: 12.5px; color: rgba(253,251,246,0.78); line-height: 1.55; }
+.ph-auth-trust-review {
+  margin-top: 8px; padding-top: 10px; border-top: 1px solid rgba(253,251,246,0.15);
+  display: flex; flex-direction: column; gap: 3px;
+}
+.ph-auth-trust-stars { color: var(--ph-gold); font-size: 12px; letter-spacing: 1px; }
+.ph-auth-trust-review p { margin: 2px 0; font-size: 12.5px; font-style: italic; color: rgba(253,251,246,0.9); line-height: 1.5; }
+.ph-auth-trust-attr { font-size: 11px; color: rgba(253,251,246,0.55); }
 .ph-auth-card h2 { font-size: 21px; margin: 0 0 8px; font-family: var(--ph-serif); font-weight: 700; }
 
 .ph-link-btn {
