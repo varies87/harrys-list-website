@@ -92,7 +92,7 @@ function FeeSlider() {
       <input
         type="range"
         min={100}
-        max={15000}
+        max={30000}
         step={100}
         value={amount}
         onChange={(e) => setAmount(Number(e.target.value))}
