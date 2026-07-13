@@ -3095,12 +3095,27 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
   const [lineItems, setLineItems] = useState([{ description: "", qty: 1, unitPrice: "" }]);
   const [showLineItems, setShowLineItems] = useState(false);
 
-  const startComposing = (qr) => {
+  const startComposing = (qr, existingQuote) => {
     setComposingFor(qr.id);
-    setQuotePrice("");
-    setQuoteMessage("");
-    setLineItems([{ description: "", qty: 1, unitPrice: "" }]);
-    setShowLineItems(false);
+    if (existingQuote) {
+      // Revising a quote that was already sent -- pre-fill instead of
+      // starting blank, and default to the itemized view if that's how it
+      // was originally sent.
+      setQuotePrice(String(existingQuote.price));
+      setQuoteMessage(existingQuote.message || "");
+      if (existingQuote.lineItems && existingQuote.lineItems.length > 0) {
+        setLineItems(existingQuote.lineItems.map((i) => ({ ...i })));
+        setShowLineItems(true);
+      } else {
+        setLineItems([{ description: "", qty: 1, unitPrice: "" }]);
+        setShowLineItems(false);
+      }
+    } else {
+      setQuotePrice("");
+      setQuoteMessage("");
+      setLineItems([{ description: "", qty: 1, unitPrice: "" }]);
+      setShowLineItems(false);
+    }
   };
 
   const lineItemsTotal = lineItems.reduce((sum, item) => {
@@ -3371,6 +3386,22 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
                       View quote →
                     </button>
                     <QuoteHistoryLink quoteRequestId={qr.id} contractorId={contractor.id} />
+                  </div>
+                )}
+                {/* Revise -- only while the homeowner hasn't accepted yet and
+                    the job hasn't been reported complete. Matches the exact
+                    window the backend allows; past that, editing is blocked
+                    server-side too. */}
+                {!alreadyReported && !myRecipient?.homeownerAccepted && (
+                  <div style={{ marginTop: 8 }}>
+                    <button
+                      type="button"
+                      className="ph-btn-secondary"
+                      style={{ fontSize: 12, padding: "5px 12px" }}
+                      onClick={() => startComposing(qr, myRecipient.quote)}
+                    >
+                      Revise quote
+                    </button>
                   </div>
                 )}
               </div>
