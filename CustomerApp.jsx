@@ -4332,7 +4332,9 @@ export default function CustomerApp() {
                     </span>
                   </div>
 
-                  <HomeownerAuth onSignedUp={handleHomeownerSignedUp} onSignedIn={handleHomeownerSignedIn} initialMode={signupIntent ? "signup" : "signin"} />
+                  <div id="signup-form">
+                    <HomeownerAuth onSignedUp={handleHomeownerSignedUp} onSignedIn={handleHomeownerSignedIn} initialMode={signupIntent ? "signup" : "signin"} />
+                  </div>
                 </div>
               </FadeIn>
             )}
