@@ -111,7 +111,27 @@ function Reveal({ children, delay = 0, className = "" }) {
 function LandingHero({ contractorCount }) {
   const scrollToDirectory = (e) => {
     e.preventDefault();
-    document.getElementById("directory")?.scrollIntoView({ behavior: "smooth" });
+    // CustomerApp mounts client-side only (dynamic import, ssr: false) and
+    // does its own async session check before the form even renders -- so
+    // #signup-form may not exist in the DOM yet at the instant this is
+    // clicked. Retry a few times over ~1.2s (matching the pattern already
+    // used for the #directory hash-scroll below) rather than landing on
+    // just the top of the section, where the actual form fields could be
+    // scrolled out of view below the trust panel and heading.
+    let attempts = 0;
+    const tryScroll = () => {
+      attempts += 1;
+      const form = document.getElementById("signup-form");
+      if (form) {
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else if (attempts < 6) {
+        setTimeout(tryScroll, 200);
+      } else {
+        // Give up waiting for the form specifically -- still get them close.
+        document.getElementById("directory")?.scrollIntoView({ behavior: "smooth" });
+      }
+    };
+    tryScroll();
   };
 
   return (
