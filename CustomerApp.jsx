@@ -1946,7 +1946,7 @@ function HomeownerView({
   // Simple nav to organize the homeowner view now that there's real content
   // in each area -- defaults to "attention" so anything needing action is
   // still what a returning homeowner sees first, matching the reorder above.
-  const [activeTab, setActiveTab] = useState("attention");
+  const [activeTab, setActiveTab] = useState("browse");
   const [shareTarget, setShareTarget] = useState(null); // { title, url } or null
   const [reviewPrompt, setReviewPrompt] = useState(null); // { quoteRequestId, contractorId, contractorName }
   const [pendingReviewJobs, setPendingReviewJobs] = useState([]); // jobs needing review before new request
@@ -2195,7 +2195,14 @@ function HomeownerView({
           type="button"
           className="ph-response-banner"
           onClick={() => {
-            document.getElementById("my-quote-requests")?.scrollIntoView({ behavior: "smooth" });
+            // The quote-requests section now lives inside the "attention"
+            // tab, which isn't necessarily the active one -- switch to it
+            // first, then wait a tick for it to actually mount before
+            // scrolling, or scrollIntoView would silently find nothing.
+            setActiveTab("attention");
+            setTimeout(() => {
+              document.getElementById("my-quote-requests")?.scrollIntoView({ behavior: "smooth" });
+            }, 50);
           }}
         >
           ▲ You have {newResponseCount} new quote response{newResponseCount === 1 ? "" : "s"} — tap to review
@@ -2213,13 +2220,15 @@ function HomeownerView({
       </div>
 
       {/* Simple nav to organize what's grown into a lot of homeowner content:
-          action items, browsing, and now sharing. Defaults to "attention". */}
+          action items, browsing, and now sharing. Defaults to "browse" --
+          directory browsing is the main screen; quote requests and sharing
+          are still one tap away, just not what loads first. */}
       <div className="ph-tab-switch" style={{ marginBottom: 22 }}>
-        <button type="button" className={activeTab === "attention" ? "is-active" : ""} onClick={() => setActiveTab("attention")}>
-          Needs attention
-        </button>
         <button type="button" className={activeTab === "browse" ? "is-active" : ""} onClick={() => setActiveTab("browse")}>
           Browse contractors
+        </button>
+        <button type="button" className={activeTab === "attention" ? "is-active" : ""} onClick={() => setActiveTab("attention")}>
+          Quote requests
         </button>
         <button type="button" className={activeTab === "share" ? "is-active" : ""} onClick={() => setActiveTab("share")}>
           Share
