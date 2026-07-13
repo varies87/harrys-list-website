@@ -282,6 +282,46 @@ function QuoteHistoryLink({ quoteRequestId, contractorId }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// ShareModal -- QR code + copyable link for anything shareable (Harry's List
+// itself, or a specific contractor's public profile). Same QR pattern
+// already used in ContractorShareScreen, reused here for visual consistency.
+// ---------------------------------------------------------------------------
+function ShareModal({ title, url, onClose }) {
+  const [copied, setCopied] = useState(false);
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}&color=1C2B22&bgcolor=FDFBF6&margin=10`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <Modal onClose={onClose}>
+      <div className="ph-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420, textAlign: "center" }}>
+        <button type="button" className="ph-modal-close" onClick={onClose} aria-label="Close">×</button>
+        <h2 style={{ marginBottom: 4 }}>{title}</h2>
+        <p className="ph-muted small" style={{ marginBottom: 16 }}>Scan the code or copy the link below.</p>
+        <div style={{ background: "#FDFBF6", border: "1px solid var(--ph-sand-line)", borderRadius: 12, padding: 20, display: "inline-block" }}>
+          <img src={qrUrl} alt="QR code" width={180} height={180} style={{ display: "block", borderRadius: 4 }} />
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 18 }}>
+          <input
+            readOnly
+            value={url}
+            style={{ flex: 1, fontFamily: "ui-monospace, monospace", fontSize: 12, padding: "9px 12px", border: "1.5px solid var(--ph-sand)", borderRadius: 6, background: "var(--ph-bg)", color: "var(--ph-ink)" }}
+          />
+          <button type="button" className="ph-btn-primary" onClick={handleCopy} style={{ whiteSpace: "nowrap" }}>
+            {copied ? "Copied!" : "Copy link"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 function InvoiceHistoryLink({ jobId }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -1903,6 +1943,11 @@ function HomeownerView({
   const [cityFilter, setCityFilter] = useState("All cities");
   const [showTradeModal, setShowTradeModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  // Simple nav to organize the homeowner view now that there's real content
+  // in each area -- defaults to "attention" so anything needing action is
+  // still what a returning homeowner sees first, matching the reorder above.
+  const [activeTab, setActiveTab] = useState("attention");
+  const [shareTarget, setShareTarget] = useState(null); // { title, url } or null
   const [reviewPrompt, setReviewPrompt] = useState(null); // { quoteRequestId, contractorId, contractorName }
   const [pendingReviewJobs, setPendingReviewJobs] = useState([]); // jobs needing review before new request
   const [showReviewGate, setShowReviewGate] = useState(false);
@@ -2167,6 +2212,22 @@ function HomeownerView({
         </span>
       </div>
 
+      {/* Simple nav to organize what's grown into a lot of homeowner content:
+          action items, browsing, and now sharing. Defaults to "attention". */}
+      <div className="ph-tab-switch" style={{ marginBottom: 22 }}>
+        <button type="button" className={activeTab === "attention" ? "is-active" : ""} onClick={() => setActiveTab("attention")}>
+          Needs attention
+        </button>
+        <button type="button" className={activeTab === "browse" ? "is-active" : ""} onClick={() => setActiveTab("browse")}>
+          Browse contractors
+        </button>
+        <button type="button" className={activeTab === "share" ? "is-active" : ""} onClick={() => setActiveTab("share")}>
+          Share
+        </button>
+      </div>
+
+      {activeTab === "attention" && (
+      <>
       {jobsToConfirm.length > 0 && (
         <div className="ph-section">
           <h3>Jobs awaiting your confirmation</h3>
@@ -2252,6 +2313,125 @@ function HomeownerView({
         </div>
       )}
 
+      {currentHomeowner && myQuoteRequests.length > 0 && (
+        <div className="ph-section" id="my-quote-requests">
+          <h3>Your quote requests</h3>
+          {myQuoteRequests.map((qr) => (
+            <div className="ph-qr-card" key={qr.id}>
+              <div className="ph-qr-desc">{qr.description}</div>
+              <div className="ph-qr-meta">{qr.timeline}{qr.budget ? ` · Budget ${qr.budget}` : ""}</div>
+              <div className="ph-qr-recipients">
+                {qr.recipients.map((r) => {
+                  const c = contractors.find((c) => idsMatch(c.id, r.contractorId));
+                  return (
+                    <div className="ph-qr-recipient-row" key={r.contractorId}>
+                      <span className="ph-qr-recipient-name">{c ? c.businessName : "Contractor"}</span>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                        {r.status === "responded" && r.quote ? (
+                          <div style={{ textAlign: "right" }}>
+                            <span className="ph-qr-recipient-quote">
+                              <span className="ph-qr-quote-price">${r.quote.price.toLocaleString()}</span>
+                              {r.quote.message && <span className="ph-muted small"> — {r.quote.message}</span>}
+                            </span>
+                            {r.quote.lineItems && r.quote.lineItems.length > 0 && (
+                              <div style={{ marginTop: 8 }}>
+                                <button
+                                  type="button"
+                                  className="ph-btn-secondary"
+                                  style={{ fontSize: 11, padding: "4px 10px" }}
+                                  onClick={() => {
+                                    const contractor = contractors.find((con) => idsMatch(con.id, r.contractorId));
+                                    window.open(`/quote-preview?contractor=${encodeURIComponent(contractor?.businessName || "Contractor")}&logoUrl=${encodeURIComponent(contractor?.logoUrl || "")}&trade=${encodeURIComponent(contractor?.trade || "")}&description=${encodeURIComponent(qr.description)}&items=${encodeURIComponent(JSON.stringify(r.quote.lineItems))}&total=${r.quote.price}&message=${encodeURIComponent(r.quote.message || "")}`, "_blank", "noopener,noreferrer");
+                                  }}
+                                >
+                                  View itemized quote →
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          (() => {
+                            const c = contractors.find((con) => idsMatch(con.id, r.contractorId));
+                            if (r.status === "sent" && c?.isSuspended) {
+                              return <span className="ph-status-chip declined" title="This contractor has an overdue fee and is temporarily unlisted.">⚠ contractor suspended</span>;
+                            }
+                            return <span className={`ph-status-chip ${r.status}`}>{r.status}</span>;
+                          })()
+                        )}
+                        {r.status === "responded" && !r.jobReported && !r.homeownerMarkedComplete && (
+                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                            {!r.homeownerAccepted ? (
+                              <button
+                                className="ph-btn-primary"
+                                style={{ fontSize: 11, padding: "5px 12px" }}
+                                onClick={() => handleAcceptQuote(qr.id, r.contractorId)}
+                              >
+                                ✓ Accept quote
+                              </button>
+                            ) : (
+                              <span className="ph-status-chip responded">✓ Accepted</span>
+                            )}
+                            <button
+                              className="ph-btn-secondary"
+                              style={{ fontSize: 11, padding: "3px 10px" }}
+                              onClick={() => handleMarkComplete(qr.id, r.contractorId)}
+                            >
+                              Mark job as complete
+                            </button>
+                          </div>
+                        )}
+                        {r.homeownerMarkedComplete && !r.jobReported && (
+                          <span className="ph-muted small" style={{ color: "#E8A33D" }}>⚠ You marked this complete — awaiting contractor report</span>
+                        )}
+                        {r.jobReported && (
+                          <span className="ph-muted small" style={{ color: "#2C6B3F" }}>✓ Contractor reported</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {currentHomeowner && estimateRequests.filter((r) => r.status === "pending").length > 0 && (
+        <div className="ph-section">
+          <h3>Estimate requests from contractors</h3>
+          <p className="ph-muted" style={{ marginBottom: 12 }}>A contractor wants to visit in person before quoting. Accept to share your phone number with them.</p>
+          {estimateRequests.filter((r) => r.status === "pending").map((er) => (
+            <div className="ph-qr-card" key={er.id} style={{ border: "1.5px solid #E8A33D" }}>
+              <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 10 }}>
+                {er.contractor?.logoUrl ? (
+                  <img src={er.contractor.logoUrl} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover" }} />
+                ) : (
+                  <div className="ph-avatar" style={{ width: 40, height: 40, fontSize: 14 }}>{er.contractor ? initials(er.contractor.businessName) : "?"}</div>
+                )}
+                <div>
+                  <div style={{ fontWeight: 700, color: "var(--ph-ink)" }}>{er.contractor?.businessName || "Contractor"}</div>
+                  <div className="ph-muted small">{er.contractor?.trade} · {er.contractor?.yearsInBusiness} years in business</div>
+                </div>
+              </div>
+              {er.quoteDescription && <div className="ph-muted small" style={{ marginBottom: 8 }}>For: <em>{er.quoteDescription}</em></div>}
+              {er.message && <p style={{ fontSize: 13.5, color: "var(--ph-ink-soft)", marginBottom: 12, fontStyle: "italic" }}>"{er.message}"</p>}
+              <div className="ph-inbox-actions">
+                <button className="ph-btn-primary" onClick={() => handleRespondToEstimate(er.id, "accepted")}>
+                  Accept & share my phone
+                </button>
+                <button className="ph-btn-secondary" onClick={() => handleRespondToEstimate(er.id, "declined")}>
+                  Decline
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      </>
+      )}
+
+      {activeTab === "browse" && (
+      <>
       {/* Auto-scrolling trade marquee */}
       <div className="ph-marquee-wrap">
         <div className="ph-marquee-track">
@@ -2504,120 +2684,68 @@ function HomeownerView({
           </div>
         )}
       </div>
+      </>
+      )}
 
-      {currentHomeowner && myQuoteRequests.length > 0 && (
-        <div className="ph-section" id="my-quote-requests">
-          <h3>Your quote requests</h3>
-          {myQuoteRequests.map((qr) => (
-            <div className="ph-qr-card" key={qr.id}>
-              <div className="ph-qr-desc">{qr.description}</div>
-              <div className="ph-qr-meta">{qr.timeline}{qr.budget ? ` · Budget ${qr.budget}` : ""}</div>
-              <div className="ph-qr-recipients">
-                {qr.recipients.map((r) => {
-                  const c = contractors.find((c) => idsMatch(c.id, r.contractorId));
-                  return (
-                    <div className="ph-qr-recipient-row" key={r.contractorId}>
-                      <span className="ph-qr-recipient-name">{c ? c.businessName : "Contractor"}</span>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-                        {r.status === "responded" && r.quote ? (
-                          <div style={{ textAlign: "right" }}>
-                            <span className="ph-qr-recipient-quote">
-                              <span className="ph-qr-quote-price">${r.quote.price.toLocaleString()}</span>
-                              {r.quote.message && <span className="ph-muted small"> — {r.quote.message}</span>}
-                            </span>
-                            {r.quote.lineItems && r.quote.lineItems.length > 0 && (
-                              <div style={{ marginTop: 8 }}>
-                                <button
-                                  type="button"
-                                  className="ph-btn-secondary"
-                                  style={{ fontSize: 11, padding: "4px 10px" }}
-                                  onClick={() => {
-                                    const contractor = contractors.find((con) => idsMatch(con.id, r.contractorId));
-                                    window.open(`/quote-preview?contractor=${encodeURIComponent(contractor?.businessName || "Contractor")}&logoUrl=${encodeURIComponent(contractor?.logoUrl || "")}&trade=${encodeURIComponent(contractor?.trade || "")}&description=${encodeURIComponent(qr.description)}&items=${encodeURIComponent(JSON.stringify(r.quote.lineItems))}&total=${r.quote.price}&message=${encodeURIComponent(r.quote.message || "")}`, "_blank", "noopener,noreferrer");
-                                  }}
-                                >
-                                  View itemized quote →
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          (() => {
-                            const c = contractors.find((con) => idsMatch(con.id, r.contractorId));
-                            if (r.status === "sent" && c?.isSuspended) {
-                              return <span className="ph-status-chip declined" title="This contractor has an overdue fee and is temporarily unlisted.">⚠ contractor suspended</span>;
-                            }
-                            return <span className={`ph-status-chip ${r.status}`}>{r.status}</span>;
-                          })()
-                        )}
-                        {r.status === "responded" && !r.jobReported && !r.homeownerMarkedComplete && (
-                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                            {!r.homeownerAccepted ? (
-                              <button
-                                className="ph-btn-primary"
-                                style={{ fontSize: 11, padding: "5px 12px" }}
-                                onClick={() => handleAcceptQuote(qr.id, r.contractorId)}
-                              >
-                                ✓ Accept quote
-                              </button>
-                            ) : (
-                              <span className="ph-status-chip responded">✓ Accepted</span>
-                            )}
-                            <button
-                              className="ph-btn-secondary"
-                              style={{ fontSize: 11, padding: "3px 10px" }}
-                              onClick={() => handleMarkComplete(qr.id, r.contractorId)}
-                            >
-                              Mark job as complete
-                            </button>
-                          </div>
-                        )}
-                        {r.homeownerMarkedComplete && !r.jobReported && (
-                          <span className="ph-muted small" style={{ color: "#E8A33D" }}>⚠ You marked this complete — awaiting contractor report</span>
-                        )}
-                        {r.jobReported && (
-                          <span className="ph-muted small" style={{ color: "#2C6B3F" }}>✓ Contractor reported</span>
-                        )}
+      {activeTab === "share" && (
+        <div className="ph-section">
+          <h3>Invite a friend to Harry's List</h3>
+          <p className="ph-muted small" style={{ marginBottom: 16 }}>
+            Know someone who needs a contractor? Share Harry's List and they'll land right on the sign-up page.
+          </p>
+          <button
+            type="button"
+            className="ph-btn-primary"
+            onClick={() => setShareTarget({ title: "Share Harry's List", url: `${window.location.origin}/?signup=true` })}
+          >
+            Get share link & QR code →
+          </button>
+
+          {currentHomeowner && (() => {
+            const favorites = contractors.filter((c) => currentHomeowner.favoriteContractorIds?.includes(c.id));
+            if (favorites.length === 0) return null;
+            return (
+              <div style={{ marginTop: 36 }}>
+                <h3>Share a contractor you like</h3>
+                <p className="ph-muted small" style={{ marginBottom: 16 }}>
+                  Recommend one of your favorites to a neighbor.
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {favorites.map((c) => (
+                    <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--ph-surface)", border: "1px solid var(--ph-sand-line)", borderRadius: 10, padding: "12px 16px" }}>
+                      <div>
+                        <div style={{ fontWeight: 700, color: "var(--ph-ink)" }}>{c.businessName}</div>
+                        <div className="ph-muted small">{c.trade}</div>
                       </div>
+                      <button
+                        type="button"
+                        className="ph-btn-secondary"
+                        style={{ fontSize: 12, padding: "6px 12px" }}
+                        onClick={() => setShareTarget({ title: `Share ${c.businessName}`, url: `${window.location.origin}/c/${c.slug || c.id}` })}
+                      >
+                        Share →
+                      </button>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })()}
+
+          {(!currentHomeowner || !contractors.some((c) => currentHomeowner.favoriteContractorIds?.includes(c.id))) && (
+            <p className="ph-muted small" style={{ marginTop: 20 }}>
+              Favorite a contractor from the Browse tab to share them here too.
+            </p>
+          )}
         </div>
       )}
 
-      {currentHomeowner && estimateRequests.filter((r) => r.status === "pending").length > 0 && (
-        <div className="ph-section">
-          <h3>Estimate requests from contractors</h3>
-          <p className="ph-muted" style={{ marginBottom: 12 }}>A contractor wants to visit in person before quoting. Accept to share your phone number with them.</p>
-          {estimateRequests.filter((r) => r.status === "pending").map((er) => (
-            <div className="ph-qr-card" key={er.id} style={{ border: "1.5px solid #E8A33D" }}>
-              <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 10 }}>
-                {er.contractor?.logoUrl ? (
-                  <img src={er.contractor.logoUrl} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover" }} />
-                ) : (
-                  <div className="ph-avatar" style={{ width: 40, height: 40, fontSize: 14 }}>{er.contractor ? initials(er.contractor.businessName) : "?"}</div>
-                )}
-                <div>
-                  <div style={{ fontWeight: 700, color: "var(--ph-ink)" }}>{er.contractor?.businessName || "Contractor"}</div>
-                  <div className="ph-muted small">{er.contractor?.trade} · {er.contractor?.yearsInBusiness} years in business</div>
-                </div>
-              </div>
-              {er.quoteDescription && <div className="ph-muted small" style={{ marginBottom: 8 }}>For: <em>{er.quoteDescription}</em></div>}
-              {er.message && <p style={{ fontSize: 13.5, color: "var(--ph-ink-soft)", marginBottom: 12, fontStyle: "italic" }}>"{er.message}"</p>}
-              <div className="ph-inbox-actions">
-                <button className="ph-btn-primary" onClick={() => handleRespondToEstimate(er.id, "accepted")}>
-                  Accept & share my phone
-                </button>
-                <button className="ph-btn-secondary" onClick={() => handleRespondToEstimate(er.id, "declined")}>
-                  Decline
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+      {shareTarget && (
+        <ShareModal
+          title={shareTarget.title}
+          url={shareTarget.url}
+          onClose={() => setShareTarget(null)}
+        />
       )}
 
       {reviewPrompt && (
