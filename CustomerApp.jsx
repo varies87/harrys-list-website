@@ -1611,7 +1611,7 @@ function HomeownerProfilePage({ homeowner, contractors, quoteRequests, onUpdate,
                     className="ph-btn-secondary"
                     style={{ fontSize: 12, padding: "5px 12px" }}
                     onClick={() => {
-                      window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&trade=${encodeURIComponent(contractor.trade || "")}&customer=${encodeURIComponent(job.homeownerName || homeowner.name || "")}&address=${encodeURIComponent(job.address || "")}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
+                      window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&logoUrl=${encodeURIComponent(contractor.logoUrl || "")}&trade=${encodeURIComponent(contractor.trade || "")}&customer=${encodeURIComponent(job.homeownerName || homeowner.name || "")}&address=${encodeURIComponent(job.address || "")}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
                     }}
                   >
                     View invoice →
@@ -2208,7 +2208,7 @@ function HomeownerView({
                     className="ph-btn-secondary"
                     style={{ fontSize: 12, padding: "5px 12px", alignSelf: "flex-start" }}
                     onClick={() => {
-                      window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&trade=${encodeURIComponent(contractor.trade || "")}&customer=${encodeURIComponent(job.homeownerName || "")}&address=${encodeURIComponent(job.address || "")}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
+                      window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&logoUrl=${encodeURIComponent(contractor.logoUrl || "")}&trade=${encodeURIComponent(contractor.trade || "")}&customer=${encodeURIComponent(job.homeownerName || "")}&address=${encodeURIComponent(job.address || "")}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
                     }}
                   >
                     View invoice →
@@ -2533,7 +2533,7 @@ function HomeownerView({
                                   style={{ fontSize: 11, padding: "4px 10px" }}
                                   onClick={() => {
                                     const contractor = contractors.find((con) => idsMatch(con.id, r.contractorId));
-                                    window.open(`/quote-preview?contractor=${encodeURIComponent(contractor?.businessName || "Contractor")}&trade=${encodeURIComponent(contractor?.trade || "")}&description=${encodeURIComponent(qr.description)}&items=${encodeURIComponent(JSON.stringify(r.quote.lineItems))}&total=${r.quote.price}&message=${encodeURIComponent(r.quote.message || "")}`, "_blank", "noopener,noreferrer");
+                                    window.open(`/quote-preview?contractor=${encodeURIComponent(contractor?.businessName || "Contractor")}&logoUrl=${encodeURIComponent(contractor?.logoUrl || "")}&trade=${encodeURIComponent(contractor?.trade || "")}&description=${encodeURIComponent(qr.description)}&items=${encodeURIComponent(JSON.stringify(r.quote.lineItems))}&total=${r.quote.price}&message=${encodeURIComponent(r.quote.message || "")}`, "_blank", "noopener,noreferrer");
                                   }}
                                 >
                                   View itemized quote →
@@ -3380,7 +3380,7 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
                       className="ph-btn-secondary"
                       style={{ fontSize: 12, padding: "5px 12px" }}
                       onClick={() => {
-                        window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&trade=${encodeURIComponent(contractor.trade || "")}&description=${encodeURIComponent(qr.description)}&items=${encodeURIComponent(JSON.stringify(myRecipient.quote.lineItems))}&total=${myRecipient.quote.price}&message=${encodeURIComponent(myRecipient.quote.message || "")}`, "_blank", "noopener,noreferrer");
+                        window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&logoUrl=${encodeURIComponent(contractor.logoUrl || "")}&trade=${encodeURIComponent(contractor.trade || "")}&description=${encodeURIComponent(qr.description)}&items=${encodeURIComponent(JSON.stringify(myRecipient.quote.lineItems))}&total=${myRecipient.quote.price}&message=${encodeURIComponent(myRecipient.quote.message || "")}`, "_blank", "noopener,noreferrer");
                       }}
                     >
                       View quote →
@@ -3865,7 +3865,7 @@ function PaymentsPanel({ contractor, onRefreshJobs, onEditAmount }) {
                   className="ph-btn-secondary"
                   style={{ fontSize: 12, padding: "5px 12px" }}
                   onClick={() => {
-                    window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&trade=${encodeURIComponent(contractor.trade || "")}&customer=${encodeURIComponent(job.homeowner || "")}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
+                    window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&logoUrl=${encodeURIComponent(contractor.logoUrl || "")}&trade=${encodeURIComponent(contractor.trade || "")}&customer=${encodeURIComponent(job.homeowner || "")}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
                   }}
                 >
                   View invoice →
@@ -6990,6 +6990,7 @@ export function ContractorInvoicePreviewScreen({ contractor }) {
   const buildUrl = (type) => {
     const params = new URLSearchParams({
       contractor: contractor.businessName || "Your business",
+      logoUrl: contractor.logoUrl || "",
       trade: contractor.trade || "",
       customer: type === "invoice" ? "Jordan Alvarez (sample customer)" : "",
       address: type === "invoice" ? "1234 Elm St, Dallas, TX 75201" : "",
