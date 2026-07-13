@@ -225,6 +225,63 @@ function ServiceAreaPicker({ selection, onChange }) {
 // load for every job in a list), and is upfront when there isn't any --
 // clicking and seeing "no changes" is a clear answer, not a dead click.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// QuoteHistoryLink -- same idea as InvoiceHistoryLink, but for a sent quote's
+// revision history (before homeowner acceptance) rather than a job's
+// after-the-fact invoice amount.
+// ---------------------------------------------------------------------------
+function QuoteHistoryLink({ quoteRequestId, contractorId }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [revisions, setRevisions] = useState(null);
+
+  const handleClick = async () => {
+    if (open) { setOpen(false); return; }
+    setOpen(true);
+    if (revisions === null) {
+      setLoading(true);
+      try {
+        const data = await apiCall("quotes", { action: "getQuoteHistory", quoteRequestId, contractorId });
+        setRevisions(data.revisions || []);
+      } catch {
+        setRevisions([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  return (
+    <span style={{ marginLeft: 10 }}>
+      <button
+        type="button"
+        onClick={handleClick}
+        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--ph-taupe)", textDecoration: "underline", padding: 0 }}
+      >
+        {open ? "Hide quote history" : "Quote history"}
+      </button>
+      {open && (
+        <div style={{ marginTop: 6, fontSize: 12.5, color: "var(--ph-ink-soft)" }}>
+          {loading ? (
+            "Loading…"
+          ) : revisions && revisions.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {revisions.map((r, i) => (
+                <div key={i}>
+                  ${r.price.toLocaleString()} — {new Date(r.supersededAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                </div>
+              ))}
+              <div className="ph-muted">↓ current quote shown above</div>
+            </div>
+          ) : (
+            <span className="ph-muted">No revisions — this was the only quote sent.</span>
+          )}
+        </div>
+      )}
+    </span>
+  );
+}
+
 function InvoiceHistoryLink({ jobId }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -1530,7 +1587,15 @@ function HomeownerProfilePage({ homeowner, contractors, quoteRequests, onUpdate,
                   <div className="ph-qr-meta">{contractor.businessName} — ${job.reportedAmount.toLocaleString()}</div>
                 </div>
                 <span className={`ph-status-chip ${job.status === "paid" || job.status === "confirmed" ? "responded" : job.status === "disputed" ? "declined" : "sent"}`}>
-                  {job.status.replace("_", " ")}
+                  {/* "paid" internally means the CONTRACTOR paid their platform
+                      fee to Harry's List -- it has nothing to do with whether
+                      the homeowner has paid the contractor for the actual job
+                      (that happens directly between them, off-platform). Shown
+                      to a homeowner, the raw word "paid" reads as "I paid
+                      through this app," which isn't true and isn't what this
+                      status means. From the homeowner's side, all that
+                      happened is they confirmed the amount -- so show that. */}
+                  {job.status === "paid" ? "confirmed" : job.status.replace("_", " ")}
                 </span>
               </div>
 
@@ -3286,6 +3351,27 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
                 <span className="ph-fee-owed-amount">${myRecipient.quote ? myRecipient.quote.price.toLocaleString() : "—"}</span>
                 {myRecipient.quote && myRecipient.quote.message && (
                   <p className="ph-muted small">{myRecipient.quote.message}</p>
+                )}
+                {/* Previously a contractor could only see the bare total and
+                    message here -- if they'd sent an itemized quote, the
+                    actual line items were gone from view the moment they hit
+                    send. This shows the full formatted breakdown, same page a
+                    homeowner sees, plus the revision history if it was ever
+                    changed before acceptance. */}
+                {myRecipient.quote && myRecipient.quote.lineItems && myRecipient.quote.lineItems.length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <button
+                      type="button"
+                      className="ph-btn-secondary"
+                      style={{ fontSize: 12, padding: "5px 12px" }}
+                      onClick={() => {
+                        window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&trade=${encodeURIComponent(contractor.trade || "")}&description=${encodeURIComponent(qr.description)}&items=${encodeURIComponent(JSON.stringify(myRecipient.quote.lineItems))}&total=${myRecipient.quote.price}&message=${encodeURIComponent(myRecipient.quote.message || "")}`, "_blank", "noopener,noreferrer");
+                      }}
+                    >
+                      View quote →
+                    </button>
+                    <QuoteHistoryLink quoteRequestId={qr.id} contractorId={contractor.id} />
+                  </div>
                 )}
               </div>
             )}
