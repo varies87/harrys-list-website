@@ -1,7 +1,7 @@
 import dynamic from "next/dynamic";
 import Head from "next/head";
 import { useEffect, useState } from "react";
-import { supabaseAuth, apiCall } from "../shared";
+import { supabaseAuth, apiCall, feeOwedForAmount } from "../shared";
 
 const ContractorApp = dynamic(() => import("../CustomerApp").then((mod) => mod.ContractorApp), { ssr: false });
 
@@ -69,6 +69,51 @@ export default function ContractorsPage() {
  * ("when a homeowner wants a quote, it comes to you"), not a promise of lead
  * volume that can't yet be guaranteed.
  */
+/**
+ * Interactive fee slider -- lets a contractor drag to any job amount and see
+ * the exact fee calculated live, using feeOwedForAmount imported directly
+ * from shared.js -- the identical bracket math the real backend charges, not
+ * a separately hand-copied version that could silently drift out of sync if
+ * the brackets ever change. Proves the "you never choose a rate, it's
+ * automatic and it blends" point instead of just asserting it in a sentence
+ * -- this is the same confusion (a contractor thinking he had to pick one
+ * flat rate) that the plain-language copy fix addressed elsewhere; this
+ * makes it concrete.
+ */
+function FeeSlider() {
+  const [amount, setAmount] = useState(1500);
+  const fee = feeOwedForAmount(amount);
+  const keep = amount - fee;
+  const rate = amount > 0 ? (fee / amount) * 100 : 0;
+
+  return (
+    <div className="cl-fee-slider">
+      <div className="cl-fee-slider-label">Try it with your own job size</div>
+      <input
+        type="range"
+        min={100}
+        max={15000}
+        step={100}
+        value={amount}
+        onChange={(e) => setAmount(Number(e.target.value))}
+        className="cl-fee-slider-input"
+        aria-label="Job amount"
+      />
+      <div className="cl-fee-slider-amount">${amount.toLocaleString()} job</div>
+      <div className="cl-fee-slider-result">
+        <div className="cl-fee-slider-stat">
+          <span className="cl-fee-slider-stat-label">You keep</span>
+          <span className="cl-fee-slider-stat-value cl-fee-slider-keep">${keep.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
+        </div>
+        <div className="cl-fee-slider-stat">
+          <span className="cl-fee-slider-stat-label">Platform fee</span>
+          <span className="cl-fee-slider-stat-value">${fee.toLocaleString("en-US", { maximumFractionDigits: 2 })} <span className="cl-fee-slider-pct">({rate.toFixed(1)}%)</span></span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ContractorHero() {
   // Founding-offer gate. We read the live remaining-spots count only to decide
   // whether the founding offer is still open -- we never display the number,
@@ -178,6 +223,7 @@ function ContractorHero() {
           The bigger the job, the smaller the cut. A $4,000 job costs you $80 — and only
           after you've been paid for it.
         </p>
+        <FeeSlider />
       </section>
 
       <section className="cl-section">
@@ -302,6 +348,46 @@ const CONTRACTOR_LANDING_STYLES = `
 .cl-fee-label { font-size: 12px; color: var(--cl-sand-text); margin-top: 4px; }
 .cl-fee-tile-dark .cl-fee-label { color: #B8C4BB; }
 .cl-fee-note { text-align: center; font-size: 13.5px; color: var(--cl-ink-soft); margin: 14px 0 0; }
+
+.cl-fee-slider {
+  margin: 24px auto 0; max-width: 420px; background: var(--cl-sand);
+  border: 1px solid var(--cl-sand-line); border-radius: 14px; padding: 20px 22px 18px;
+}
+.cl-fee-slider-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--cl-sand-text); text-align: center; margin-bottom: 12px;
+}
+.cl-fee-slider-input {
+  width: 100%; -webkit-appearance: none; appearance: none; height: 6px; border-radius: 999px;
+  background: var(--cl-sand-line); outline: none; margin: 0 0 6px; cursor: pointer;
+}
+.cl-fee-slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--cl-clay); border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.25); cursor: pointer;
+}
+.cl-fee-slider-input::-moz-range-thumb {
+  width: 22px; height: 22px; border-radius: 50%; background: var(--cl-clay);
+  border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.25); cursor: pointer;
+}
+.cl-fee-slider-amount {
+  text-align: center; font-family: var(--cl-serif); font-size: 22px; font-weight: 700;
+  color: var(--cl-ink); margin-bottom: 14px;
+}
+.cl-fee-slider-result {
+  display: flex; justify-content: center; gap: 28px; padding-top: 14px;
+  border-top: 1px solid var(--cl-sand-line);
+}
+.cl-fee-slider-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.cl-fee-slider-stat-label {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--cl-sand-text);
+}
+.cl-fee-slider-stat-value { font-size: 19px; font-weight: 700; color: var(--cl-ink); font-family: var(--cl-serif); }
+.cl-fee-slider-keep { color: #2C6B3F; }
+.cl-fee-slider-pct { font-size: 12px; font-weight: 600; color: var(--cl-sand-text); }
+@media (max-width: 480px) {
+  .cl-fee-slider-result { gap: 20px; }
+}
 .cl-h2 {
   font-family: var(--cl-serif); font-size: 24px; font-weight: 600; margin: 0 0 20px; color: var(--cl-ink);
 }
