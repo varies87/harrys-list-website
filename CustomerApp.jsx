@@ -219,6 +219,65 @@ function ServiceAreaPicker({ selection, onChange }) {
 // animation) when the view logically changes even if the component type
 // stays the same (e.g. switching contractor tabs).
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// InvoiceHistoryLink -- small expandable link shown next to "View invoice".
+// Only fetches the job's amount-revision history when clicked (not on page
+// load for every job in a list), and is upfront when there isn't any --
+// clicking and seeing "no changes" is a clear answer, not a dead click.
+// ---------------------------------------------------------------------------
+function InvoiceHistoryLink({ jobId }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [revisions, setRevisions] = useState(null);
+
+  const handleClick = async () => {
+    if (open) { setOpen(false); return; }
+    setOpen(true);
+    if (revisions === null) {
+      setLoading(true);
+      try {
+        const data = await apiCall("jobs", { action: "getJobAmountHistory", jobId });
+        setRevisions(data.revisions || []);
+      } catch {
+        setRevisions([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  return (
+    <span style={{ marginLeft: 10 }}>
+      <button
+        type="button"
+        onClick={handleClick}
+        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--ph-taupe)", textDecoration: "underline", padding: 0 }}
+      >
+        {open ? "Hide price history" : "Price history"}
+      </button>
+      {open && (
+        <div style={{ marginTop: 6, fontSize: 12.5, color: "var(--ph-ink-soft)" }}>
+          {loading ? (
+            "Loading…"
+          ) : revisions && revisions.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {revisions.map((r, i) => (
+                <div key={i}>
+                  ${r.amount.toLocaleString()} — {new Date(r.supersededAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  {r.note ? ` (${r.note})` : ""}
+                </div>
+              ))}
+              <div className="ph-muted">↓ current amount shown above</div>
+            </div>
+          ) : (
+            <span className="ph-muted">No changes — this was the only amount.</span>
+          )}
+        </div>
+      )}
+    </span>
+  );
+}
+
 function FadeIn({ children, keyValue }) {
   return (
     <div key={keyValue} className="ph-fadein">
@@ -1474,6 +1533,27 @@ function HomeownerProfilePage({ homeowner, contractors, quoteRequests, onUpdate,
                   {job.status.replace("_", " ")}
                 </span>
               </div>
+
+              {/* Persistent invoice access -- this used to only show while a
+                  job was awaiting confirmation, then vanish once confirmed,
+                  meaning a homeowner permanently lost access to their invoice
+                  the moment they did the normal, expected thing. Now it's
+                  always here for any job with itemized invoice data. */}
+              {job.invoiceLineItems && job.invoiceLineItems.length > 0 && (
+                <div style={{ marginBottom: 10 }}>
+                  <button
+                    type="button"
+                    className="ph-btn-secondary"
+                    style={{ fontSize: 12, padding: "5px 12px" }}
+                    onClick={() => {
+                      window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&trade=${encodeURIComponent(contractor.trade || "")}&customer=${encodeURIComponent(job.homeownerName || homeowner.name || "")}&address=${encodeURIComponent(job.address || "")}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
+                    }}
+                  >
+                    View invoice →
+                  </button>
+                  <InvoiceHistoryLink jobId={job.id} />
+                </div>
+              )}
 
               {canReview && (
                 <div className="ph-job-review-area">
@@ -3657,6 +3737,25 @@ function PaymentsPanel({ contractor, onRefreshJobs, onEditAmount }) {
               <span>Homeowner: {job.homeowner}</span>
               <span>Reported amount: ${job.reportedAmount.toLocaleString()}</span>
             </div>
+
+            {/* Persistent invoice access -- previously contractors had no way
+                to look back at their own past invoices at all, only the raw
+                description/amount shown above. */}
+            {job.invoiceLineItems && job.invoiceLineItems.length > 0 && (
+              <div>
+                <button
+                  type="button"
+                  className="ph-btn-secondary"
+                  style={{ fontSize: 12, padding: "5px 12px" }}
+                  onClick={() => {
+                    window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&trade=${encodeURIComponent(contractor.trade || "")}&customer=${encodeURIComponent(job.homeowner || "")}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
+                  }}
+                >
+                  View invoice →
+                </button>
+                <InvoiceHistoryLink jobId={job.id} />
+              </div>
+            )}
 
             {/* Countdown banner -- shown on unpaid confirmed jobs */}
             {daysRemaining !== null && !job.feePaid && (
