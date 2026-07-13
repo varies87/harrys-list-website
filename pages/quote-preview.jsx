@@ -8,10 +8,11 @@ export default function QuotePreviewPage() {
 
   useEffect(() => {
     if (!router.isReady) return;
-    const { contractor, trade, customer, address, description, items, total, message, type } = router.query;
+    const { contractor, logoUrl, trade, customer, address, description, items, total, message, type } = router.query;
     try {
       setData({
         contractor: contractor || "Contractor",
+        logoUrl: logoUrl || "",
         trade: trade || "",
         customer: customer || "",
         address: address || "",
@@ -31,8 +32,9 @@ export default function QuotePreviewPage() {
 
   const isInvoice = data.type === "invoice";
   const docLabel = isInvoice ? "INVOICE" : "QUOTE";
-  // Invoices read green, quotes read clay -- a thin accent, not a heavy banner.
-  const accentColor = isInvoice ? "#2C6B3F" : "#C1622A";
+  // Kept deliberately neutral -- black ink on white paper, not a branded
+  // color banner. A thin black rule separates the header from the body.
+  const ink = "#1A1A1A";
 
   return (
     <>
@@ -47,26 +49,35 @@ export default function QuotePreviewPage() {
           }
         `}</style>
       </Head>
-      <div style={{ background: "#FBF7F0", minHeight: "100vh", padding: "40px 24px", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
-        <div className="doc-wrap" style={{ maxWidth: 680, margin: "0 auto", background: "#fff", borderRadius: 12, border: "1px solid #EDE3D2", overflow: "hidden" }}>
+      <div style={{ background: "#F5F5F4", minHeight: "100vh", padding: "40px 24px", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+        <div className="doc-wrap" style={{ maxWidth: 680, margin: "0 auto", background: "#fff", borderRadius: 12, border: "1px solid #E0E0E0", overflow: "hidden" }}>
 
-          {/* Header -- the CONTRACTOR is the headline; the doc type sits opposite.
-              A thin accent border replaces the old dark platform banner. */}
-          <div style={{ padding: "28px 36px 24px", borderBottom: `3px solid ${accentColor}` }}>
+          {/* Header -- contractor logo + name is the headline; doc type sits
+              opposite. A single thin black rule replaces any colored banner. */}
+          <div style={{ padding: "28px 36px 24px", borderBottom: `3px solid ${ink}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-              <div>
-                <div style={{ fontSize: 26, fontWeight: 700, color: "#1C2B22", letterSpacing: "-0.01em", lineHeight: 1.1 }}>{data.contractor}</div>
-                <div style={{ fontSize: 13, color: "#6B7280", marginTop: 4 }}>
-                  {data.trade ? `${data.trade} · ` : ""}Dallas–Fort Worth
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                {data.logoUrl && (
+                  <img
+                    src={data.logoUrl}
+                    alt=""
+                    style={{ width: 56, height: 56, borderRadius: 10, objectFit: "cover", border: "1px solid #E0E0E0", flexShrink: 0 }}
+                  />
+                )}
+                <div>
+                  <div style={{ fontSize: 26, fontWeight: 700, color: ink, letterSpacing: "-0.01em", lineHeight: 1.1 }}>{data.contractor}</div>
+                  <div style={{ fontSize: 13, color: "#6B7280", marginTop: 4 }}>
+                    {data.trade ? `${data.trade} · ` : ""}Dallas–Fort Worth
+                  </div>
                 </div>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontSize: 22, fontWeight: 700, color: accentColor, letterSpacing: "0.1em" }}>{docLabel}</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: ink, letterSpacing: "0.1em" }}>{docLabel}</div>
                 <div style={{ fontSize: 12, color: "#6B7280", marginTop: 4 }}>{data.date}</div>
               </div>
             </div>
             {isInvoice && (
-              <div style={{ marginTop: 12, display: "inline-block", background: "#E3EEDF", color: "#2C6B3F", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>
+              <div style={{ marginTop: 12, display: "inline-block", background: "#fff", color: ink, border: `1px solid ${ink}`, fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>
                 Awaiting your confirmation
               </div>
             )}
@@ -80,7 +91,7 @@ export default function QuotePreviewPage() {
             {isInvoice && (data.customer || data.address) && (
               <div style={{ marginBottom: 22 }}>
                 <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#9AA29A", marginBottom: 4 }}>Bill to</div>
-                {data.customer && <div style={{ fontSize: 14.5, fontWeight: 600, color: "#1C2B22" }}>{data.customer}</div>}
+                {data.customer && <div style={{ fontSize: 14.5, fontWeight: 600, color: ink }}>{data.customer}</div>}
                 {data.address && <div style={{ fontSize: 13.5, color: "#3D4F42", marginTop: 2 }}>{data.address}</div>}
               </div>
             )}
@@ -88,7 +99,7 @@ export default function QuotePreviewPage() {
             <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
               <button
                 onClick={() => window.print()}
-                style={{ background: accentColor, color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                style={{ background: ink, color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
               >
                 Download / Print PDF
               </button>
@@ -97,10 +108,14 @@ export default function QuotePreviewPage() {
             {/* Job description */}
             <div style={{ background: "#F7F8F7", borderRadius: 8, padding: "13px 16px", marginBottom: 22 }}>
               <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#9AA29A", marginBottom: 4 }}>Job description</div>
-              <div style={{ fontSize: 14, color: "#1C2B22" }}>{data.description}</div>
+              <div style={{ fontSize: 14, color: ink }}>{data.description}</div>
             </div>
 
-            {/* Line items table */}
+            {/* Line items table -- numbers use the same sans-serif as
+                everything else, not a monospace/coding font. Most monospace
+                fonts render "0" with a slash or dot through it to
+                distinguish it from the letter O, which looks out of place
+                on a professional invoice. */}
             {data.items.length > 0 && (
               <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 8 }}>
                 <thead>
@@ -118,18 +133,18 @@ export default function QuotePreviewPage() {
                     const lineTotal = qty * unit;
                     return (
                       <tr key={i} style={{ borderBottom: "1px solid #F1F1EF" }}>
-                        <td style={{ padding: "12px 12px 12px 0", fontSize: 14, color: "#1C2B22" }}>{item.description}</td>
-                        <td style={{ padding: "12px", fontSize: 14, color: "#1C2B22", textAlign: "center" }}>{qty}</td>
-                        <td style={{ padding: "12px 0 12px 12px", fontSize: 13.5, color: "#1C2B22", textAlign: "right", fontFamily: "monospace" }}>${unit.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
-                        <td style={{ padding: "12px 0 12px 12px", fontSize: 13.5, color: "#1C2B22", textAlign: "right", fontFamily: "monospace" }}>${lineTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: "12px 12px 12px 0", fontSize: 14, color: ink }}>{item.description}</td>
+                        <td style={{ padding: "12px", fontSize: 14, color: ink, textAlign: "center" }}>{qty}</td>
+                        <td style={{ padding: "12px 0 12px 12px", fontSize: 13.5, color: ink, textAlign: "right" }}>${unit.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: "12px 0 12px 12px", fontSize: 13.5, color: ink, textAlign: "right" }}>${lineTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
                       </tr>
                     );
                   })}
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={3} style={{ padding: "16px 12px 0 0", textAlign: "right", fontWeight: 700, fontSize: 15, color: "#1C2B22" }}>{isInvoice ? "Amount due" : "Total"}</td>
-                    <td style={{ padding: "16px 0 0 12px", textAlign: "right", fontWeight: 700, fontSize: 22, color: accentColor, fontFamily: "monospace" }}>${data.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+                    <td colSpan={3} style={{ padding: "16px 12px 0 0", textAlign: "right", fontWeight: 700, fontSize: 15, color: ink }}>{isInvoice ? "Amount due" : "Total"}</td>
+                    <td style={{ padding: "16px 0 0 12px", textAlign: "right", fontWeight: 700, fontSize: 22, color: ink }}>${data.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -147,7 +162,7 @@ export default function QuotePreviewPage() {
 
             {/* Invoice confirmation note */}
             {isInvoice && (
-              <div style={{ background: "#E3EEDF", borderRadius: 8, padding: "13px 16px", marginTop: 24, fontSize: 13, color: "#2C6B3F", lineHeight: 1.55 }}>
+              <div style={{ background: "#F7F8F7", border: `1px solid ${ink}`, borderRadius: 8, padding: "13px 16px", marginTop: 24, fontSize: 13, color: ink, lineHeight: 1.55 }}>
                 <strong>To confirm this invoice:</strong> log in to your Harry's List account and click “Confirm — that's correct” on your jobs page. This isn't a charge to you.
               </div>
             )}
