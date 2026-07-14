@@ -1959,6 +1959,7 @@ function HomeownerView({
   const [disputingJob, setDisputingJob] = useState(null);
   const [disputeNote, setDisputeNote] = useState("");
   const [estimateRequests, setEstimateRequests] = useState([]);
+  const [thumbsUppedIds, setThumbsUppedIds] = useState([]);
 
   // Load estimate requests for the homeowner
   useEffect(() => {
@@ -1967,6 +1968,19 @@ function HomeownerView({
     apiCall("estimates", { action: "listForHomeowner" })
       .then((data) => { if (!cancelled) setEstimateRequests(data.estimateRequests || []); })
       .catch(() => { if (!cancelled) setEstimateRequests([]); });
+    return () => { cancelled = true; };
+  }, [currentHomeowner?.id]);
+
+  // Load which contractors this homeowner has thumbs-upped -- used to power
+  // "share a contractor you like" on the Share tab. Favoriting exists in the
+  // data model but isn't reachable in the current UI, while thumbs-up is a
+  // real, already-used like/save signal, so that's what this is built on.
+  useEffect(() => {
+    if (!currentHomeowner) { setThumbsUppedIds([]); return; }
+    let cancelled = false;
+    apiCall("reviews", { action: "listThumbsUppedByMe" })
+      .then((data) => { if (!cancelled) setThumbsUppedIds(data.contractorIds || []); })
+      .catch(() => { if (!cancelled) setThumbsUppedIds([]); });
     return () => { cancelled = true; };
   }, [currentHomeowner?.id]);
 
@@ -2290,7 +2304,7 @@ function HomeownerView({
           Quote requests
         </button>
         <button type="button" className={activeTab === "estimates" ? "is-active" : ""} onClick={() => setActiveTab("estimates")}>
-          Estimates &amp; invoices
+          Estimates &amp; Invoices
         </button>
         <button type="button" className={activeTab === "share" ? "is-active" : ""} onClick={() => setActiveTab("share")}>
           Share
@@ -2597,7 +2611,7 @@ function HomeownerView({
         <>
           {jobsToConfirm.length === 0 && (
             <div className="ph-section">
-              <h3>Estimates &amp; invoices</h3>
+              <h3>Estimates &amp; Invoices</h3>
               <p className="ph-muted small">No jobs are currently awaiting your confirmation.</p>
             </div>
           )}
@@ -2703,16 +2717,16 @@ function HomeownerView({
           </button>
 
           {currentHomeowner && (() => {
-            const favorites = contractors.filter((c) => currentHomeowner.favoriteContractorIds?.includes(c.id));
-            if (favorites.length === 0) return null;
+            const thumbsUpped = contractors.filter((c) => thumbsUppedIds.some((id) => idsMatch(id, c.id)));
+            if (thumbsUpped.length === 0) return null;
             return (
               <div style={{ marginTop: 36 }}>
                 <h3>Share a contractor you like</h3>
                 <p className="ph-muted small" style={{ marginBottom: 16 }}>
-                  Recommend one of your favorites to a neighbor.
+                  Recommend a contractor you've thumbs-upped to a neighbor.
                 </p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {favorites.map((c) => (
+                  {thumbsUpped.map((c) => (
                     <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--ph-surface)", border: "1px solid var(--ph-sand-line)", borderRadius: 10, padding: "12px 16px" }}>
                       <div>
                         <div style={{ fontWeight: 700, color: "var(--ph-ink)" }}>{c.businessName}</div>
@@ -2733,9 +2747,9 @@ function HomeownerView({
             );
           })()}
 
-          {(!currentHomeowner || !contractors.some((c) => currentHomeowner.favoriteContractorIds?.includes(c.id))) && (
+          {(!currentHomeowner || thumbsUppedIds.length === 0) && (
             <p className="ph-muted small" style={{ marginTop: 20 }}>
-              Favorite a contractor from the Browse tab to share them here too.
+              Thumbs up a contractor from their profile to share them here too.
             </p>
           )}
         </div>
