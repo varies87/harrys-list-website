@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import Image from "next/image";
+import NextImage from "next/image";
 import {
   supabaseAuth,
   STRIPE_PUBLISHABLE_KEY,
@@ -441,7 +441,7 @@ function ContractorCard({ contractor, onViewProfile, onRequestQuote, isFavorite,
         <div className="ph-card-id">
           {contractor.logoUrl ? (
             <div className="ph-avatar ph-avatar-logo">
-              <Image src={contractor.logoUrl} alt={`${contractor.businessName} logo`} fill sizes="120px" />
+              <NextImage src={contractor.logoUrl} alt={`${contractor.businessName} logo`} fill sizes="120px" />
             </div>
           ) : (
             <div className="ph-avatar">{initials(contractor.businessName)}</div>
@@ -590,7 +590,7 @@ function ContractorProfileModal({ contractor, onClose, currentHomeowner, onToggl
         <div className="ph-modal-head">
           {contractor.logoUrl ? (
             <div className="ph-avatar lg ph-avatar-logo">
-              <Image src={contractor.logoUrl} alt={`${contractor.businessName} logo`} fill sizes="120px" />
+              <NextImage src={contractor.logoUrl} alt={`${contractor.businessName} logo`} fill sizes="120px" />
             </div>
           ) : (
             <div className="ph-avatar lg">{initials(contractor.businessName)}</div>
@@ -704,7 +704,7 @@ function ContractorProfileModal({ contractor, onClose, currentHomeowner, onToggl
                   onClick={() => setLightbox(photo.publicUrl)}
                   onKeyDown={activateOnKey(() => setLightbox(photo.publicUrl))}
                 >
-                  <Image
+                  <NextImage
                     src={photo.thumbnailUrl}
                     alt={photo.caption || "Portfolio photo"}
                     fill
@@ -2411,7 +2411,7 @@ function HomeownerView({
             <div className="ph-qr-card" key={er.id} style={{ border: "1.5px solid #E8A33D" }}>
               <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 10 }}>
                 {er.contractor?.logoUrl ? (
-                  <Image src={er.contractor.logoUrl} alt="" width={40} height={40} style={{ borderRadius: 8, objectFit: "cover" }} />
+                  <NextImage src={er.contractor.logoUrl} alt="" width={40} height={40} style={{ borderRadius: 8, objectFit: "cover" }} />
                 ) : (
                   <div className="ph-avatar" style={{ width: 40, height: 40, fontSize: 14 }}>{er.contractor ? initials(er.contractor.businessName) : "?"}</div>
                 )}
@@ -3055,7 +3055,7 @@ function ContractorOnboarding({ onCreate, onEdit, editingContractor }) {
           isEditing &&
           editingContractor.logoUrl && (
             <div className="ph-logo-preview">
-              <Image src={editingContractor.logoUrl} alt="Current logo" width={52} height={52} style={{ borderRadius: "var(--ph-radius-sm)", objectFit: "cover", border: "1px solid var(--ph-sand-line)" }} />
+              <NextImage src={editingContractor.logoUrl} alt="Current logo" width={52} height={52} style={{ borderRadius: "var(--ph-radius-sm)", objectFit: "cover", border: "1px solid var(--ph-sand-line)" }} />
               <span className="ph-muted small">Current logo</span>
             </div>
           )
@@ -7021,7 +7021,7 @@ export function ContractorPublicProfile() {
             {/* Hero header */}
             <div className="pp-header">
               {contractor.logoUrl ? (
-                <Image className="ph-avatar lg ph-avatar-img" src={contractor.logoUrl} alt={`${contractor.businessName} logo`} width={72} height={72} style={{ borderRadius: 14 }} />
+                <NextImage className="ph-avatar lg ph-avatar-img" src={contractor.logoUrl} alt={`${contractor.businessName} logo`} width={72} height={72} style={{ borderRadius: 14 }} />
               ) : (
                 <div className="ph-avatar lg" style={{ width: 72, height: 72, fontSize: 22, borderRadius: 14 }}>{initials(contractor.businessName)}</div>
               )}
