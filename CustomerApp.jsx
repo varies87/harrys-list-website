@@ -5106,7 +5106,13 @@ function ContractorShell({
           <div className="cd-brand-sub">Contractor Portal</div>
         </div>
         <div className="cd-sidebar-user">
-          <div className="cd-sidebar-avatar">{initials(contractor.businessName)}</div>
+          <div className="cd-sidebar-avatar">
+            {contractor.logoUrl ? (
+              <NextImage src={contractor.logoUrl} alt={`${contractor.businessName} logo`} fill sizes="34px" style={{ objectFit: "cover" }} />
+            ) : (
+              initials(contractor.businessName)
+            )}
+          </div>
           <div className="cd-sidebar-user-info">
             <div className="cd-sidebar-user-name">{contractor.businessName}</div>
             <div className={`cd-sidebar-user-status ${statusOk ? "is-active" : "is-warn"}`}>{statusLabel}</div>
@@ -6369,6 +6375,8 @@ const CUSTOMER_STYLES = `
   color: #fff;
   flex-shrink: 0;
   font-family: var(--ph-serif);
+  position: relative;
+  overflow: hidden;
 }
 .cd-sidebar-user-info { min-width: 0; }
 .cd-sidebar-user-name {
