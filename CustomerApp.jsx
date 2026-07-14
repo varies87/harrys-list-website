@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import Image from "next/image";
 import {
   supabaseAuth,
   STRIPE_PUBLISHABLE_KEY,
@@ -440,7 +441,7 @@ function ContractorCard({ contractor, onViewProfile, onRequestQuote, isFavorite,
         <div className="ph-card-id">
           {contractor.logoUrl ? (
             <div className="ph-avatar ph-avatar-logo">
-              <img src={contractor.logoUrl} alt={`${contractor.businessName} logo`} />
+              <Image src={contractor.logoUrl} alt={`${contractor.businessName} logo`} fill sizes="120px" />
             </div>
           ) : (
             <div className="ph-avatar">{initials(contractor.businessName)}</div>
@@ -589,7 +590,7 @@ function ContractorProfileModal({ contractor, onClose, currentHomeowner, onToggl
         <div className="ph-modal-head">
           {contractor.logoUrl ? (
             <div className="ph-avatar lg ph-avatar-logo">
-              <img src={contractor.logoUrl} alt={`${contractor.businessName} logo`} />
+              <Image src={contractor.logoUrl} alt={`${contractor.businessName} logo`} fill sizes="120px" />
             </div>
           ) : (
             <div className="ph-avatar lg">{initials(contractor.businessName)}</div>
@@ -693,19 +694,24 @@ function ContractorProfileModal({ contractor, onClose, currentHomeowner, onToggl
             <div className="ph-profile-label" style={{ marginBottom: 10 }}>Past work</div>
             <div className="ph-portfolio-grid">
               {photos.map((photo) => (
-                <img
+                <div
                   key={photo.id}
-                  src={photo.thumbnailUrl}
-                  alt={photo.caption || "Portfolio photo"}
-                  className="ph-portfolio-thumb"
+                  className="ph-portfolio-thumb-wrap"
                   title={photo.caption || ""}
-                  loading="lazy"
                   role="button"
                   tabIndex={0}
                   aria-label={`View portfolio photo${photo.caption ? `: ${photo.caption}` : ""} full size`}
                   onClick={() => setLightbox(photo.publicUrl)}
                   onKeyDown={activateOnKey(() => setLightbox(photo.publicUrl))}
-                />
+                >
+                  <Image
+                    src={photo.thumbnailUrl}
+                    alt={photo.caption || "Portfolio photo"}
+                    fill
+                    sizes="(max-width: 480px) 45vw, 150px"
+                    className="ph-portfolio-thumb"
+                  />
+                </div>
               ))}
             </div>
           </div>
@@ -2405,7 +2411,7 @@ function HomeownerView({
             <div className="ph-qr-card" key={er.id} style={{ border: "1.5px solid #E8A33D" }}>
               <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 10 }}>
                 {er.contractor?.logoUrl ? (
-                  <img src={er.contractor.logoUrl} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover" }} />
+                  <Image src={er.contractor.logoUrl} alt="" width={40} height={40} style={{ borderRadius: 8, objectFit: "cover" }} />
                 ) : (
                   <div className="ph-avatar" style={{ width: 40, height: 40, fontSize: 14 }}>{er.contractor ? initials(er.contractor.businessName) : "?"}</div>
                 )}
@@ -3049,7 +3055,7 @@ function ContractorOnboarding({ onCreate, onEdit, editingContractor }) {
           isEditing &&
           editingContractor.logoUrl && (
             <div className="ph-logo-preview">
-              <img src={editingContractor.logoUrl} alt="Current logo" />
+              <Image src={editingContractor.logoUrl} alt="Current logo" width={52} height={52} style={{ borderRadius: "var(--ph-radius-sm)", objectFit: "cover", border: "1px solid var(--ph-sand-line)" }} />
               <span className="ph-muted small">Current logo</span>
             </div>
           )
@@ -4149,7 +4155,7 @@ function PaymentsPanel({ contractor, onRefreshJobs, onEditAmount }) {
 // ---------------------------------------------------------------------------
 // Root customer-facing app
 // ---------------------------------------------------------------------------
-export default function CustomerApp() {
+export default function CustomerApp({ initialContractorsRaw } = {}) {
   const [contractors, setContractors] = useState([]);
   const [quoteRequests, setQuoteRequests] = useState([]);
   const [currentHomeowner, setCurrentHomeowner] = useState(null);
@@ -4205,22 +4211,39 @@ export default function CustomerApp() {
 
   useEffect(() => {
     let cancelled = false;
+
+    const normalizeAndSort = (rawContractors) => {
+      const normalized = rawContractors.map(normalizeContractor);
+      // Sort by weighted score: thumbsUp × 2 + avgRating × reviewCount
+      // Contractors with no reviews fall back to thumbs up only
+      normalized.sort((a, b) => {
+        const avgA = a.reviews.length > 0 ? a.reviews.reduce((s, r) => s + r.rating, 0) / a.reviews.length : 0;
+        const avgB = b.reviews.length > 0 ? b.reviews.reduce((s, r) => s + r.rating, 0) / b.reviews.length : 0;
+        const scoreA = (a.thumbsUp * 2) + (avgA * a.reviews.length);
+        const scoreB = (b.thumbsUp * 2) + (avgB * b.reviews.length);
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        // Tiebreak: newer first
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+      return normalized;
+    };
+
+    // The homepage already fetches this exact list server-side (for SEO)
+    // and passes it straight through here -- reuse it instead of firing an
+    // identical request again the instant this component mounts. Only falls
+    // back to a fresh client fetch if that data is missing (e.g. this ever
+    // renders somewhere without SSR, or the server fetch failed and
+    // returned an empty array).
+    if (initialContractorsRaw && initialContractorsRaw.length > 0) {
+      setContractors(normalizeAndSort(initialContractorsRaw));
+      setLoadingContractors(false);
+      return;
+    }
+
     apiCall("contractors", { action: "list" })
       .then((data) => {
         if (cancelled) return;
-        const normalized = data.contractors.map(normalizeContractor);
-        // Sort by weighted score: thumbsUp × 2 + avgRating × reviewCount
-        // Contractors with no reviews fall back to thumbs up only
-        normalized.sort((a, b) => {
-          const avgA = a.reviews.length > 0 ? a.reviews.reduce((s, r) => s + r.rating, 0) / a.reviews.length : 0;
-          const avgB = b.reviews.length > 0 ? b.reviews.reduce((s, r) => s + r.rating, 0) / b.reviews.length : 0;
-          const scoreA = (a.thumbsUp * 2) + (avgA * a.reviews.length);
-          const scoreB = (b.thumbsUp * 2) + (avgB * b.reviews.length);
-          if (scoreB !== scoreA) return scoreB - scoreA;
-          // Tiebreak: newer first
-          return new Date(b.createdAt) - new Date(a.createdAt);
-        });
-        setContractors(normalized);
+        setContractors(normalizeAndSort(data.contractors));
         setLoadingContractors(false);
       })
       .catch((err) => {
@@ -4229,6 +4252,7 @@ export default function CustomerApp() {
         setLoadingContractors(false);
       });
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /** Pulls in a contractor's own jobs and quote requests after sign-in. */
@@ -5652,7 +5676,7 @@ const CUSTOMER_STYLES = `
 /* Zoom the logo to fill the box: the white-background step bakes ~6% padding
    around each logo, so scaling ~1.14x crops that margin and the mark goes
    edge to edge. Works on already-uploaded logos without re-processing. */
-.ph-avatar-logo { overflow: hidden; background: #fff; padding: 0; }
+.ph-avatar-logo { overflow: hidden; background: #fff; padding: 0; position: relative; }
 .ph-avatar-logo img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.14); display: block; }
 .ph-avatar.lg.ph-avatar-logo img { transform: scale(1.22); }
 .ph-card-name {
@@ -6145,17 +6169,20 @@ const CUSTOMER_STYLES = `
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 8px;
 }
-.ph-portfolio-thumb {
+.ph-portfolio-thumb-wrap {
+  position: relative;
   width: 100%;
   aspect-ratio: 4/3;
-  object-fit: cover;
   border-radius: 6px;
-  display: block;
+  overflow: hidden;
   background: var(--ph-sand-line);
-  transition: transform 0.15s ease;
   cursor: zoom-in;
 }
-.ph-portfolio-thumb:hover { transform: scale(1.03); }
+.ph-portfolio-thumb {
+  object-fit: cover;
+  transition: transform 0.15s ease;
+}
+.ph-portfolio-thumb-wrap:hover .ph-portfolio-thumb { transform: scale(1.03); }
 
 .ph-picker { border: 1.5px solid var(--ph-sand); border-radius: var(--ph-radius-md); padding: 14px; background: var(--ph-surface); }
 .ph-picker-allbtn {
@@ -6994,7 +7021,7 @@ export function ContractorPublicProfile() {
             {/* Hero header */}
             <div className="pp-header">
               {contractor.logoUrl ? (
-                <img className="ph-avatar lg ph-avatar-img" src={contractor.logoUrl} alt={`${contractor.businessName} logo`} style={{ width: 72, height: 72, borderRadius: 14 }} />
+                <Image className="ph-avatar lg ph-avatar-img" src={contractor.logoUrl} alt={`${contractor.businessName} logo`} width={72} height={72} style={{ borderRadius: 14 }} />
               ) : (
                 <div className="ph-avatar lg" style={{ width: 72, height: 72, fontSize: 22, borderRadius: 14 }}>{initials(contractor.businessName)}</div>
               )}
