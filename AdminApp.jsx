@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { apiCall, normalizeContractor, describeServiceArea } from "./shared.js";
 
 // ---------------------------------------------------------------------------
@@ -142,7 +143,7 @@ function QueueRow({ contractor, onApprove, onReject, onArchive, onEdit, busy }) 
       <button type="button" className="ad-row-head" onClick={() => setExpanded((e) => !e)}>
         <div className="ad-row-avatar">
           {contractor.logoUrl ? (
-            <img src={contractor.logoUrl} alt="" />
+            <Image src={contractor.logoUrl} alt="" width={36} height={36} style={{ objectFit: "cover" }} />
           ) : (
             <span>{contractor.businessName.slice(0, 2).toUpperCase()}</span>
           )}
@@ -533,7 +534,7 @@ function AdminEditContractor({ contractor, password, onClose, onSaved }) {
           <div className="ad-edit-section-title">Logo</div>
           <div className="ad-edit-logo-row">
             <div className="ad-edit-logo-preview">
-              {logoUrl ? <img src={logoUrl} alt="Logo" /> : <span>{(businessName || "??").slice(0, 2).toUpperCase()}</span>}
+              {logoUrl ? <Image src={logoUrl} alt="Logo" width={64} height={64} style={{ objectFit: "cover" }} /> : <span>{(businessName || "??").slice(0, 2).toUpperCase()}</span>}
             </div>
             <label className={`ad-btn ad-btn-ghost ${uploadingLogo ? "is-busy" : ""}`}>
               <input type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={onLogoPick} disabled={uploadingLogo} />
@@ -596,7 +597,7 @@ function AdminEditContractor({ contractor, password, onClose, onSaved }) {
             <div className="ad-edit-photo-grid">
               {photos.map((p) => (
                 <div className="ad-edit-photo" key={p.id}>
-                  <img src={p.thumbnailUrl || p.publicUrl} alt={p.caption || "Portfolio photo"} />
+                  <Image src={p.thumbnailUrl || p.publicUrl} alt={p.caption || "Portfolio photo"} fill sizes="150px" style={{ objectFit: "cover" }} />
                   <button type="button" className="ad-edit-photo-del" disabled={busyPhotoId === p.id} onClick={() => deletePhoto(p.id)} aria-label="Delete photo">×</button>
                 </div>
               ))}
