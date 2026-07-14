@@ -4914,6 +4914,38 @@ function ContractorDashboard({ contractor, quoteRequests, onNavigate }) {
           <div className="cd-stat-sub">{feesOwed > 0 ? `Pay before ${PAYMENT_DUE_DAYS}-day deadline` : "All paid up ✓"}</div>
         </div>
       </div>
+
+      {/* Reviews -- previously a contractor's own dashboard never loaded this
+          at all (getMine only returned the thumbs-up count, no actual star
+          ratings or written feedback). Reuses the same Stars component and
+          review-card look already used on the homeowner-facing side. */}
+      <div className="cd-section">
+        <div className="cd-section-header">
+          <span>Reviews</span>
+          {contractor.reviews && contractor.reviews.length > 0 && (
+            <span className="cd-muted" style={{ fontSize: 13 }}>
+              {(contractor.reviews.reduce((s, r) => s + r.rating, 0) / contractor.reviews.length).toFixed(1)} average
+              {" "}({contractor.reviews.length} review{contractor.reviews.length === 1 ? "" : "s"})
+            </span>
+          )}
+        </div>
+        {(!contractor.reviews || contractor.reviews.length === 0) && (
+          <p className="cd-muted">No reviews yet — they'll show up here once a homeowner reviews a completed job.</p>
+        )}
+        {contractor.reviews && contractor.reviews.length > 0 && (
+          <div className="cd-card">
+            {contractor.reviews.map((r) => (
+              <div className="ph-profile-review" key={r.id}>
+                <Stars value={r.rating} />
+                {r.text && <p className="ph-profile-review-text">"{r.text}"</p>}
+                <div className="ph-profile-review-date">
+                  Verified homeowner · {new Date(r.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
