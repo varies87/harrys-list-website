@@ -52,9 +52,9 @@ export default function HomePage({ contractors }) {
         <p>Find trusted home service contractors in Dallas-Fort Worth. No contractor paid to be listed here.</p>
         {contractors.map((c) => (
           <div key={c.id}>
-            <h2>{c.business_name}</h2>
+            <h2>{c.businessName}</h2>
             <p>{c.trade} · {c.bio}</p>
-            <a href={`/c/${c.slug || c.id}`}>{c.business_name} profile</a>
+            <a href={`/c/${c.slug || c.id}`}>{c.businessName} profile</a>
           </div>
         ))}
       </div>
@@ -62,7 +62,7 @@ export default function HomePage({ contractors }) {
       {!signedIn && <LandingHero contractorCount={contractors.length} />}
 
       <div id="directory">
-        <CustomerApp />
+        <CustomerApp initialContractorsRaw={contractors} />
       </div>
     </>
   );
@@ -382,14 +382,12 @@ export async function getServerSideProps() {
       body: JSON.stringify({ action: "list" }),
     });
     const data = await res.json();
-    const contractors = (data.contractors || []).map((c) => ({
-      id: c.id,
-      business_name: c.businessName,
-      trade: c.trade,
-      bio: c.bio || "",
-      slug: c.slug || null,
-    }));
-    return { props: { contractors } };
+    // Full raw contractor data, not a slimmed SEO-only shape -- this gets
+    // passed straight through as CustomerApp's initial state (see below),
+    // instead of CustomerApp re-fetching the exact same list again the
+    // moment it mounts client-side. Same data, one network round-trip
+    // instead of two.
+    return { props: { contractors: data.contractors || [] } };
   } catch {
     return { props: { contractors: [] } };
   }
