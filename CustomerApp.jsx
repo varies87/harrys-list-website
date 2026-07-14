@@ -422,7 +422,7 @@ function Stars({ value }) {
 // ---------------------------------------------------------------------------
 // Contractor card (directory view)
 // ---------------------------------------------------------------------------
-function ContractorCard({ contractor, selected, onToggleSelect, onViewProfile, isFavorite, onToggleFavorite }) {
+function ContractorCard({ contractor, onViewProfile, onRequestQuote, isFavorite, onToggleFavorite }) {
   const avgRating =
     contractor.reviews.length > 0
       ? contractor.reviews.reduce((s, r) => s + r.rating, 0) / contractor.reviews.length
@@ -430,7 +430,7 @@ function ContractorCard({ contractor, selected, onToggleSelect, onViewProfile, i
 
   return (
     <div
-      className={`ph-card ${selected ? "is-selected" : ""}`}
+      className="ph-card"
       role="button"
       tabIndex={0}
       onClick={() => onViewProfile(contractor)}
@@ -520,10 +520,10 @@ function ContractorCard({ contractor, selected, onToggleSelect, onViewProfile, i
         </button>
         <button
           type="button"
-          className={`ph-card-select-btn ${selected ? "is-selected" : ""}`}
-          onClick={(e) => { e.stopPropagation(); onToggleSelect(contractor.id); }}
+          className="ph-card-select-btn"
+          onClick={(e) => { e.stopPropagation(); onRequestQuote(contractor); }}
         >
-          {selected ? "✓ Selected for quote" : "Select for quote"}
+          Request a quote →
         </button>
       </div>
     </div>
@@ -1051,7 +1051,7 @@ function WelcomeModal({ onClose }) {
             <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--ph-clay)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 15, flexShrink: 0 }}>1</div>
             <div>
               <div style={{ fontWeight: 700, color: "var(--ph-ink)", marginBottom: 2 }}>Browse and select contractors</div>
-              <div className="ph-muted small">Tap "Select for quote" on any contractor you want to reach out to. You can select several, then request quotes from all of them at once.</div>
+              <div className="ph-muted small">Tap "Request a quote" on any contractor you want to reach out to. It goes straight to them, no extra steps.</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
@@ -1942,7 +1942,7 @@ function HomeownerView({
   const [tradeFilter, setTradeFilter] = useState("All trades");
   const [cityFilter, setCityFilter] = useState("All cities");
   const [showTradeModal, setShowTradeModal] = useState(false);
-  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [pendingQuoteContractor, setPendingQuoteContractor] = useState(null);
   // Simple nav to organize the homeowner view now that there's real content
   // in each area -- defaults to "attention" so anything needing action is
   // still what a returning homeowner sees first, matching the reorder above.
@@ -2100,23 +2100,82 @@ function HomeownerView({
     });
   }, [contractors, tradeFilter, cityFilter]);
 
-  const toggleSelect = useCallback((id) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
-
-  const selectedContractors = contractors.filter((c) => selectedIds.has(c.id));
-  // Who a quote request actually goes to: a profile-popup / public-profile
-  // "Request a quote" click targets that one contractor (quoteTargetContractors);
-  // otherwise it's the checkbox selection. The modal and the submit handler
-  // MUST use the same list -- they previously diverged, so a profile-initiated
-  // request submitted the (possibly empty or unrelated) checkbox selection.
-  const quoteContractors = quoteTargetContractors.length > 0 ? quoteTargetContractors : selectedContractors;
+  // Who a quote request goes to: always exactly one contractor now (the card
+  // that was clicked, or a profile-popup / public-profile "Request a quote"
+  // click) -- there's no more multi-select-then-batch-send flow.
+  const quoteContractors = quoteTargetContractors;
   const allCities = [...INDEX.cityToZips.keys()];
+
+  /**
+   * Single entry point for "Request a quote" from anywhere -- a directory
+   * card, the profile modal, or a public profile page. Handles the sign-in
+   * gate and the unreviewed-jobs gate (previously only on the old global
+   * "Request a quote" button), then opens the modal targeting just this one
+   * contractor.
+   */
+  const handleRequestQuoteClick = (contractor) => {
+    if (!currentHomeowner) {
+      onRequireAuth?.();
+      return;
+    }
+    const hasUnreviewedMarked = myQuoteRequests.some((qr) =>
+      qr.recipients.some((r) => {
+        if (!r.homeownerMarkedComplete) return false;
+        const c = contractors.find((con) => idsMatch(con.id, r.contractorId));
+        const job = c?.completedJobs?.find(
+          (j) => idsMatch(j.homeownerId, currentHomeowner?.id) &&
+            (j.status === "confirmed" || j.status === "paid")
+        );
+        if (!job) return false;
+        return !c?.reviews?.some((rev) =>
+          idsMatch(rev.homeownerId, currentHomeowner?.id) && idsMatch(rev.jobId, job.id)
+        );
+      })
+    );
+    const hasUnreviewedConfirmed = contractors.some((c) =>
+      (c.completedJobs || []).some((job) => {
+        if (!idsMatch(job.homeownerId, currentHomeowner?.id)) return false;
+        if (job.status !== "confirmed" && job.status !== "paid") return false;
+        return !c.reviews?.some((rev) =>
+          idsMatch(rev.homeownerId, currentHomeowner?.id) && idsMatch(rev.jobId, job.id)
+        );
+      })
+    );
+    const hasUnreviewed = hasUnreviewedMarked || hasUnreviewedConfirmed;
+
+    if (hasUnreviewed) {
+      const unreviewedJobs = [];
+      myQuoteRequests.forEach((qr) => {
+        qr.recipients.forEach((r) => {
+          if (!r.homeownerMarkedComplete) return;
+          const c = contractors.find((con) => idsMatch(con.id, r.contractorId));
+          const job = c?.completedJobs?.find(
+            (j) => idsMatch(j.homeownerId, currentHomeowner?.id) &&
+              (j.status === "confirmed" || j.status === "paid")
+          );
+          if (!job) return;
+          const hasReview = c?.reviews?.some((rev) =>
+            idsMatch(rev.homeownerId, currentHomeowner?.id) && idsMatch(rev.jobId, job.id)
+          );
+          if (!hasReview) {
+            unreviewedJobs.push({
+              jobId: job.id,
+              contractorId: c.id,
+              contractorName: c.businessName,
+              description: qr.description,
+              homeownerId: currentHomeowner.id,
+            });
+          }
+        });
+      });
+      setUnreviewedJobsForGate(unreviewedJobs);
+      setPendingQuoteContractor(contractor);
+      setShowReviewGate(true);
+    } else {
+      setQuoteTargetContractors([contractor]);
+      setShowQuoteModal(true);
+    }
+  };
 
   // Build jobsToConfirm from homeownerJobs (independent of contractor objects)
   // so confirmation works even if the contractor isn't in the approved directory
@@ -2230,6 +2289,9 @@ function HomeownerView({
         <button type="button" className={activeTab === "attention" ? "is-active" : ""} onClick={() => setActiveTab("attention")}>
           Quote requests
         </button>
+        <button type="button" className={activeTab === "estimates" ? "is-active" : ""} onClick={() => setActiveTab("estimates")}>
+          Estimates &amp; invoices
+        </button>
         <button type="button" className={activeTab === "share" ? "is-active" : ""} onClick={() => setActiveTab("share")}>
           Share
         </button>
@@ -2237,90 +2299,6 @@ function HomeownerView({
 
       {activeTab === "attention" && (
       <>
-      {jobsToConfirm.length > 0 && (
-        <div className="ph-section">
-          <h3>Jobs awaiting your confirmation</h3>
-          <p className="ph-muted small">
-            A contractor reported one of these jobs as complete. Confirm the amount if it's correct, or dispute
-            it if something's wrong — this is what starts their payment clock with the platform, not a charge to you.
-          </p>
-          {jobsToConfirm.map(({ contractor, job }) => {
-            const hasQuote = job.quotedAmount != null;
-            const isHigherThanQuoted = hasQuote && job.reportedAmount > job.quotedAmount;
-            const delta = hasQuote ? job.reportedAmount - job.quotedAmount : null;
-            const daysSinceReported = Math.floor((Date.now() - new Date(job.reportedAt).getTime()) / (24 * 60 * 60 * 1000));
-            const daysUntilAutoConfirm = Math.max(0, AUTO_CONFIRM_DAYS - daysSinceReported);
-            return (
-              <div className={`ph-card ph-confirm-card ${isHigherThanQuoted ? "is-over-quote" : ""}`} key={job.id}>
-                <div className="ph-qr-desc">{job.description}</div>
-                <div className="ph-card-meta">
-                  <span>{contractor.businessName}</span>
-                </div>
-
-                <div className="ph-confirm-amounts">
-                  {hasQuote && (
-                    <div className="ph-confirm-amount-row">
-                      <span className="ph-confirm-amount-label">Originally quoted</span>
-                      <span className="ph-confirm-amount-value">${job.quotedAmount.toLocaleString()}</span>
-                    </div>
-                  )}
-                  <div className="ph-confirm-amount-row">
-                    <span className="ph-confirm-amount-label">Invoice total</span>
-                    <span className={`ph-confirm-amount-value ${isHigherThanQuoted ? "is-higher" : ""}`}>
-                      ${job.reportedAmount.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-
-                {job.invoiceLineItems && job.invoiceLineItems.length > 0 && (
-                  <button
-                    type="button"
-                    className="ph-btn-secondary"
-                    style={{ fontSize: 12, padding: "5px 12px", alignSelf: "flex-start" }}
-                    onClick={() => {
-                      window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&logoUrl=${encodeURIComponent(contractor.logoUrl || "")}&trade=${encodeURIComponent(contractor.trade || "")}&customer=${encodeURIComponent(job.homeownerName || "")}&address=${encodeURIComponent(job.address || "")}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
-                    }}
-                  >
-                    View invoice →
-                  </button>
-                )}
-
-                {isHigherThanQuoted && (
-                  <div className="ph-confirm-warning">
-                    ⚠ This is ${delta.toLocaleString()} more than the original quote of ${job.quotedAmount.toLocaleString()}.
-                    If the scope of work didn't change, dispute this before confirming.
-                  </div>
-                )}
-
-                <div
-                  className="ph-auto-confirm-notice"
-                  style={{
-                    background: daysUntilAutoConfirm <= 2 ? "#FAE5DE" : "#E3EEDF",
-                    border: `1px solid ${daysUntilAutoConfirm <= 2 ? "#E3BCA8" : "#c7e0c2"}`,
-                    color: daysUntilAutoConfirm <= 2 ? "#A8442B" : "#2C6B3F",
-                  }}
-                >
-                  {daysUntilAutoConfirm <= 0
-                    ? "This will be automatically confirmed shortly if no action is taken."
-                    : `If you don't confirm or dispute within ${daysUntilAutoConfirm} day${daysUntilAutoConfirm === 1 ? "" : "s"}, it'll be automatically confirmed.`}
-                </div>
-
-                <div className="ph-inbox-actions">
-                  <button className="ph-btn-primary" onClick={() => onConfirmJob(contractor.id, job.id)}>
-                    Confirm — that's correct
-                  </button>
-                  <button
-                    className="ph-btn-secondary"
-                    onClick={() => setDisputingJob({ contractorId: contractor.id, jobId: job.id })}
-                  >
-                    Dispute
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
 
       {currentHomeowner && myQuoteRequests.length > 0 && (
         <div className="ph-section" id="my-quote-requests">
@@ -2470,86 +2448,6 @@ function HomeownerView({
         >
           {tradeFilter !== "All trades" ? `✕ ${tradeFilter}` : "Filter by trade"}
         </button>
-        <div className="ph-filter-spacer" />
-        <div className="ph-selected-pill">
-          {selectedIds.size} selected
-        </div>
-        <button
-          type="button"
-          className="ph-btn-primary"
-          disabled={selectedIds.size === 0}
-          onClick={() => {
-            // Signed-out visitors can browse and select contractors, but need
-            // an account to actually submit a request -- prompt sign-in here
-            // rather than letting them fill out the whole form first.
-            if (!currentHomeowner) {
-              onRequireAuth?.();
-              return;
-            }
-            // Block if homeowner has any completed jobs without a review
-            // Check 1: jobs homeowner marked complete but hasn't reviewed
-            const hasUnreviewedMarked = myQuoteRequests.some((qr) =>
-              qr.recipients.some((r) => {
-                if (!r.homeownerMarkedComplete) return false;
-                const c = contractors.find((con) => idsMatch(con.id, r.contractorId));
-                const job = c?.completedJobs?.find(
-                  (j) => idsMatch(j.homeownerId, currentHomeowner?.id) &&
-                    (j.status === "confirmed" || j.status === "paid")
-                );
-                if (!job) return false;
-                return !c?.reviews?.some((rev) =>
-                  idsMatch(rev.homeownerId, currentHomeowner?.id) && idsMatch(rev.jobId, job.id)
-                );
-              })
-            );
-            // Check 2: contractor-reported confirmed/paid jobs without a review
-            const hasUnreviewedConfirmed = contractors.some((c) =>
-              (c.completedJobs || []).some((job) => {
-                if (!idsMatch(job.homeownerId, currentHomeowner?.id)) return false;
-                if (job.status !== "confirmed" && job.status !== "paid") return false;
-                return !c.reviews?.some((rev) =>
-                  idsMatch(rev.homeownerId, currentHomeowner?.id) && idsMatch(rev.jobId, job.id)
-                );
-              })
-            );
-            const hasUnreviewed = hasUnreviewedMarked || hasUnreviewedConfirmed;
-
-            // Build the list of unreviewed jobs for the inline review modal
-            const unreviewedJobs = [];
-            myQuoteRequests.forEach((qr) => {
-              qr.recipients.forEach((r) => {
-                if (!r.homeownerMarkedComplete) return;
-                const c = contractors.find((con) => idsMatch(con.id, r.contractorId));
-                const job = c?.completedJobs?.find(
-                  (j) => idsMatch(j.homeownerId, currentHomeowner?.id) &&
-                    (j.status === "confirmed" || j.status === "paid")
-                );
-                if (!job) return;
-                const hasReview = c?.reviews?.some((rev) =>
-                  idsMatch(rev.homeownerId, currentHomeowner?.id) && idsMatch(rev.jobId, job.id)
-                );
-                if (!hasReview) {
-                  unreviewedJobs.push({
-                    jobId: job.id,
-                    contractorId: c.id,
-                    contractorName: c.businessName,
-                    description: qr.description,
-                    homeownerId: currentHomeowner.id,
-                  });
-                }
-              });
-            });
-
-            if (hasUnreviewed) {
-              setUnreviewedJobsForGate(unreviewedJobs);
-              setShowReviewGate(true);
-            } else {
-              setShowQuoteModal(true);
-            }
-          }}
-        >
-          Request a quote
-        </button>
       </div>
 
       {/* Trade filter modal -- slides up from bottom, 2-col icon grid */}
@@ -2657,9 +2555,8 @@ function HomeownerView({
           <ContractorCard
             key={c.id}
             contractor={c}
-            selected={selectedIds.has(c.id)}
-            onToggleSelect={toggleSelect}
             onViewProfile={setProfileContractor}
+            onRequestQuote={handleRequestQuoteClick}
             isFavorite={!!currentHomeowner && currentHomeowner.favoriteContractorIds.includes(c.id)}
             onToggleFavorite={currentHomeowner ? onToggleFavorite : null}
           />
@@ -2694,6 +2591,101 @@ function HomeownerView({
         )}
       </div>
       </>
+      )}
+
+      {activeTab === "estimates" && (
+        <>
+          {jobsToConfirm.length === 0 && (
+            <div className="ph-section">
+              <h3>Estimates &amp; invoices</h3>
+              <p className="ph-muted small">No jobs are currently awaiting your confirmation.</p>
+            </div>
+          )}
+      {jobsToConfirm.length > 0 && (
+        <div className="ph-section">
+          <h3>Jobs awaiting your confirmation</h3>
+          <p className="ph-muted small">
+            A contractor reported one of these jobs as complete. Confirm the amount if it's correct, or dispute
+            it if something's wrong — this is what starts their payment clock with the platform, not a charge to you.
+          </p>
+          {jobsToConfirm.map(({ contractor, job }) => {
+            const hasQuote = job.quotedAmount != null;
+            const isHigherThanQuoted = hasQuote && job.reportedAmount > job.quotedAmount;
+            const delta = hasQuote ? job.reportedAmount - job.quotedAmount : null;
+            const daysSinceReported = Math.floor((Date.now() - new Date(job.reportedAt).getTime()) / (24 * 60 * 60 * 1000));
+            const daysUntilAutoConfirm = Math.max(0, AUTO_CONFIRM_DAYS - daysSinceReported);
+            return (
+              <div className={`ph-card ph-confirm-card ${isHigherThanQuoted ? "is-over-quote" : ""}`} key={job.id}>
+                <div className="ph-qr-desc">{job.description}</div>
+                <div className="ph-card-meta">
+                  <span>{contractor.businessName}</span>
+                </div>
+
+                <div className="ph-confirm-amounts">
+                  {hasQuote && (
+                    <div className="ph-confirm-amount-row">
+                      <span className="ph-confirm-amount-label">Originally quoted</span>
+                      <span className="ph-confirm-amount-value">${job.quotedAmount.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="ph-confirm-amount-row">
+                    <span className="ph-confirm-amount-label">Invoice total</span>
+                    <span className={`ph-confirm-amount-value ${isHigherThanQuoted ? "is-higher" : ""}`}>
+                      ${job.reportedAmount.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                {job.invoiceLineItems && job.invoiceLineItems.length > 0 && (
+                  <button
+                    type="button"
+                    className="ph-btn-secondary"
+                    style={{ fontSize: 12, padding: "5px 12px", alignSelf: "flex-start" }}
+                    onClick={() => {
+                      window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&logoUrl=${encodeURIComponent(contractor.logoUrl || "")}&trade=${encodeURIComponent(contractor.trade || "")}&customer=${encodeURIComponent(job.homeownerName || "")}&address=${encodeURIComponent(job.address || "")}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
+                    }}
+                  >
+                    View invoice →
+                  </button>
+                )}
+
+                {isHigherThanQuoted && (
+                  <div className="ph-confirm-warning">
+                    ⚠ This is ${delta.toLocaleString()} more than the original quote of ${job.quotedAmount.toLocaleString()}.
+                    If the scope of work didn't change, dispute this before confirming.
+                  </div>
+                )}
+
+                <div
+                  className="ph-auto-confirm-notice"
+                  style={{
+                    background: daysUntilAutoConfirm <= 2 ? "#FAE5DE" : "#E3EEDF",
+                    border: `1px solid ${daysUntilAutoConfirm <= 2 ? "#E3BCA8" : "#c7e0c2"}`,
+                    color: daysUntilAutoConfirm <= 2 ? "#A8442B" : "#2C6B3F",
+                  }}
+                >
+                  {daysUntilAutoConfirm <= 0
+                    ? "This will be automatically confirmed shortly if no action is taken."
+                    : `If you don't confirm or dispute within ${daysUntilAutoConfirm} day${daysUntilAutoConfirm === 1 ? "" : "s"}, it'll be automatically confirmed.`}
+                </div>
+
+                <div className="ph-inbox-actions">
+                  <button className="ph-btn-primary" onClick={() => onConfirmJob(contractor.id, job.id)}>
+                    Confirm — that's correct
+                  </button>
+                  <button
+                    className="ph-btn-secondary"
+                    onClick={() => setDisputingJob({ contractorId: contractor.id, jobId: job.id })}
+                  >
+                    Dispute
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+        </>
       )}
 
       {activeTab === "share" && (
@@ -2768,7 +2760,11 @@ function HomeownerView({
         <ReviewGateModal
           onClose={() => {
             setShowReviewGate(false);
-            setShowQuoteModal(true); // open quote modal after all reviews done
+            if (pendingQuoteContractor) {
+              setQuoteTargetContractors([pendingQuoteContractor]);
+              setPendingQuoteContractor(null);
+              setShowQuoteModal(true); // open quote modal after all reviews done
+            }
           }}
           unreviewedJobs={unreviewedJobsForGate}
           onReviewSubmitted={async (job, review) => {
@@ -2799,8 +2795,7 @@ function HomeownerView({
         onRequireAuth={onRequireAuth}
         onRequestQuote={(c) => {
           setProfileContractor(null);
-          setQuoteTargetContractors([c]);
-          setShowQuoteModal(true);
+          handleRequestQuoteClick(c);
         }}
       />
       {showQuoteModal && (
