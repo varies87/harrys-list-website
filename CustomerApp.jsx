@@ -3359,7 +3359,7 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
             </div>
             <QuotePhotos quoteRequestId={qr.id} />
 
-            {myStatus === "sent" && composingFor === qr.id && (
+            {(myStatus === "sent" || myStatus === "responded") && composingFor === qr.id && (
               <div className="ph-compose-quote">
                 {/* Toggle between simple price and itemized */}
                 <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
@@ -3463,7 +3463,7 @@ function ContractorInbox({ contractor, quoteRequests, onRespond, onReportJob, on
                     disabled={showLineItems ? lineItemsTotal <= 0 : !quotePrice || parseFloat(quotePrice) <= 0}
                     onClick={() => submitQuote(qr)}
                   >
-                    Send quote to homeowner
+                    {myStatus === "responded" ? "Send revised quote" : "Send quote to homeowner"}
                   </button>
                   <button className="ph-btn-secondary" onClick={() => setComposingFor(null)}>
                     Cancel
