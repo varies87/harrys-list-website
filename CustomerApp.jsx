@@ -1657,6 +1657,7 @@ function HomeownerProfilePage({ homeowner, contractors, quoteRequests, onUpdate,
                     className="ph-btn-secondary"
                     style={{ fontSize: 12, padding: "5px 12px" }}
                     onClick={() => {
+                      apiCall("jobs", { action: "markInvoiceViewed", jobId: job.id }).catch(() => {});
                       window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&logoUrl=${encodeURIComponent(contractor.logoUrl || "")}&trade=${encodeURIComponent(contractor.trade || "")}&customer=${encodeURIComponent(job.homeownerName || homeowner.name || "")}&address=${encodeURIComponent(job.address || "")}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
                     }}
                   >
@@ -2662,6 +2663,7 @@ function HomeownerView({
                     className="ph-btn-secondary"
                     style={{ fontSize: 12, padding: "5px 12px", alignSelf: "flex-start" }}
                     onClick={() => {
+                      apiCall("jobs", { action: "markInvoiceViewed", jobId: job.id }).catch(() => {});
                       window.open(`/quote-preview?contractor=${encodeURIComponent(contractor.businessName)}&logoUrl=${encodeURIComponent(contractor.logoUrl || "")}&trade=${encodeURIComponent(contractor.trade || "")}&customer=${encodeURIComponent(job.homeownerName || "")}&address=${encodeURIComponent(job.address || "")}&description=${encodeURIComponent(job.description)}&items=${encodeURIComponent(JSON.stringify(job.invoiceLineItems))}&total=${job.reportedAmount}&message=${encodeURIComponent(job.invoiceNote || "")}&type=invoice`, "_blank", "noopener,noreferrer");
                     }}
                   >
@@ -4045,9 +4047,15 @@ function PaymentsPanel({ contractor, onRefreshJobs, onEditAmount }) {
             {job.status === "pending_confirmation" && (
               <div className="ph-job-status-row">
                 <span className="ph-status-chip sent">awaiting homeowner confirmation</span>
-                <button type="button" className="ph-btn-secondary" onClick={() => startEditing(job)}>
-                  Edit amount
-                </button>
+                {job.invoiceViewedAt ? (
+                  <span className="ph-muted small">
+                    Homeowner has viewed this invoice — no longer editable directly. If something's wrong, wait for them to confirm or dispute it.
+                  </span>
+                ) : (
+                  <button type="button" className="ph-btn-secondary" onClick={() => startEditing(job)}>
+                    Edit amount
+                  </button>
+                )}
               </div>
             )}
 
