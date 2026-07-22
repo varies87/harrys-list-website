@@ -3890,9 +3890,18 @@ function PaymentsPanel({ contractor, onRefreshJobs, onEditAmount }) {
   const [processingJobId, setProcessingJobId] = useState(null);
   const [editingJobId, setEditingJobId] = useState(null);
   const [editAmountInput, setEditAmountInput] = useState("");
+  const [editLineItems, setEditLineItems] = useState([]);
+  const [editInvoiceNote, setEditInvoiceNote] = useState("");
   const [editLowReportReason, setEditLowReportReason] = useState("");
   const [editError, setEditError] = useState(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
+
+  const editInvoiceTotal = editLineItems.reduce((sum, item) => {
+    return sum + (parseFloat(item.qty) || 1) * (parseFloat(item.unitPrice) || 0);
+  }, 0);
+  const addEditLineItem = () => setEditLineItems((prev) => [...prev, { description: "", qty: 1, unitPrice: "" }]);
+  const removeEditLineItem = (i) => setEditLineItems((prev) => prev.filter((_, idx) => idx !== i));
+  const updateEditLineItem = (i, field, value) => setEditLineItems((prev) => prev.map((item, idx) => idx === i ? { ...item, [field]: value } : item));
 
   /**
    * Payment confirmation no longer calls markPaid directly -- that call is
@@ -3925,19 +3934,27 @@ function PaymentsPanel({ contractor, onRefreshJobs, onEditAmount }) {
   const startEditing = (job) => {
     setEditingJobId(job.id);
     setEditAmountInput(String(job.reportedAmount));
+    setEditLineItems(
+      job.invoiceLineItems && job.invoiceLineItems.length > 0
+        ? job.invoiceLineItems.map((item) => ({ ...item }))
+        : [{ description: job.description || "", qty: 1, unitPrice: String(job.reportedAmount) }]
+    );
+    setEditInvoiceNote(job.invoiceNote || "");
     setEditLowReportReason("");
     setEditError(null);
   };
 
   const submitEdit = async (job) => {
-    const newAmount = parseFloat(editAmountInput);
-    if (!newAmount || newAmount <= 0) return;
+    const validItems = editLineItems.filter((l) => l.description.trim() && parseFloat(l.unitPrice) > 0);
+    if (validItems.length === 0 || editInvoiceTotal <= 0) return;
     setEditSubmitting(true);
     setEditError(null);
     try {
-      await onEditAmount(job.id, newAmount, editLowReportReason.trim() || undefined);
+      await onEditAmount(job.id, editInvoiceTotal, editLowReportReason.trim() || undefined, validItems, editInvoiceNote.trim() || undefined);
       setEditingJobId(null);
       setEditAmountInput("");
+      setEditLineItems([]);
+      setEditInvoiceNote("");
       setEditLowReportReason("");
     } catch (err) {
       setEditError(err.message);
@@ -4076,32 +4093,70 @@ function PaymentsPanel({ contractor, onRefreshJobs, onEditAmount }) {
                     Homeowner's note: <em>{job.disputeNote}</em>
                   </p>
                 )}
-                <div className="ph-report-row">
-                  <span className="ph-report-prefix">$</span>
-                  <input
-                    className="ph-report-input"
-                    value={editAmountInput}
-                    onChange={(e) => {
-                      setEditAmountInput(e.target.value);
-                      setEditLowReportReason("");
-                    }}
-                    inputMode="decimal"
-                  />
-                  <button
-                    type="button"
-                    className="ph-btn-primary"
-                    disabled={!editAmountInput || parseFloat(editAmountInput) <= 0 || editSubmitting}
-                    onClick={() => submitEdit(job)}
-                  >
-                    {editSubmitting ? "Saving…" : "Save corrected amount"}
+
+                <div className="ph-line-items">
+                  <div className="ph-line-items-header">
+                    <span>Description</span>
+                    <span>Qty</span>
+                    <span>Unit price</span>
+                    <span>Total</span>
+                    <span></span>
+                  </div>
+                  {editLineItems.map((item, i) => (
+                    <div className="ph-line-item-row" key={i}>
+                      <input
+                        className="ph-line-item-desc"
+                        value={item.description}
+                        onChange={(e) => updateEditLineItem(i, "description", e.target.value)}
+                        placeholder="e.g. Labor"
+                      />
+                      <input
+                        className="ph-line-item-num"
+                        value={item.qty}
+                        onChange={(e) => updateEditLineItem(i, "qty", e.target.value)}
+                        inputMode="decimal"
+                        placeholder="1"
+                      />
+                      <input
+                        className="ph-line-item-num"
+                        value={item.unitPrice}
+                        onChange={(e) => updateEditLineItem(i, "unitPrice", e.target.value)}
+                        inputMode="decimal"
+                        placeholder="0.00"
+                      />
+                      <span className="ph-line-item-total">
+                        ${((parseFloat(item.qty) || 1) * (parseFloat(item.unitPrice) || 0)).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </span>
+                      <button
+                        type="button"
+                        className="ph-line-item-remove"
+                        onClick={() => removeEditLineItem(i)}
+                        disabled={editLineItems.length === 1}
+                      >×</button>
+                    </div>
+                  ))}
+                  <button type="button" className="ph-btn-secondary" style={{ fontSize: 12, padding: "5px 12px", marginTop: 8 }} onClick={addEditLineItem}>
+                    + Add line item
                   </button>
-                  <button type="button" className="ph-btn-secondary" onClick={() => setEditingJobId(null)} disabled={editSubmitting}>
-                    Cancel
-                  </button>
+                  <div className="ph-line-items-total">
+                    <span>Corrected total</span>
+                    <span>${editInvoiceTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  </div>
                 </div>
+
+                <label className="ph-field" style={{ marginTop: 8 }}>
+                  <span>Note to homeowner (optional)</span>
+                  <textarea
+                    rows={2}
+                    value={editInvoiceNote}
+                    onChange={(e) => setEditInvoiceNote(e.target.value)}
+                    placeholder="e.g. Corrected the quantity on the mulch line."
+                  />
+                </label>
+
                 {job.quotedAmount != null &&
-                  parseFloat(editAmountInput) > 0 &&
-                  parseFloat(editAmountInput) < job.quotedAmount * 0.9 && (
+                  editInvoiceTotal > 0 &&
+                  editInvoiceTotal < job.quotedAmount * 0.9 && (
                     <div className="ph-low-report-warning">
                       <span className="ph-low-report-label">
                         ⚠ This is more than 10% below your quoted price of ${job.quotedAmount.toLocaleString()}. Please explain why.
@@ -4119,6 +4174,19 @@ function PaymentsPanel({ contractor, onRefreshJobs, onEditAmount }) {
                 <p className="ph-muted small">
                   Saving sends this back to the homeowner for a fresh confirmation.
                 </p>
+                <div className="ph-inbox-actions">
+                  <button
+                    type="button"
+                    className="ph-btn-primary"
+                    disabled={editInvoiceTotal <= 0 || editSubmitting}
+                    onClick={() => submitEdit(job)}
+                  >
+                    {editSubmitting ? "Saving…" : "Save corrected invoice"}
+                  </button>
+                  <button type="button" className="ph-btn-secondary" onClick={() => setEditingJobId(null)} disabled={editSubmitting}>
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
 
@@ -7397,9 +7465,9 @@ export function ContractorApp() {
     } catch (err) { setLoadError(err.message); }
   };
 
-  const handleEditReportedAmount = async (jobId, newAmount, lowReportReason) => {
+  const handleEditReportedAmount = async (jobId, newAmount, lowReportReason, invoiceLineItems, invoiceNote) => {
     try {
-      const data = await apiCall("jobs", { action: "editReportedAmount", jobId, newAmount, lowReportReason });
+      const data = await apiCall("jobs", { action: "editReportedAmount", jobId, newAmount, lowReportReason, invoiceLineItems, invoiceNote });
       setCurrentContractor((prev) => !prev ? prev : { ...prev, completedJobs: (prev.completedJobs || []).map((j) => idsMatch(j.id, jobId) ? data.job : j) });
     } catch (err) { setLoadError(err.message); }
   };
